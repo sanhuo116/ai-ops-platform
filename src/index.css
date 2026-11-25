@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* 参考后台（spagent.indata.cc）提取的设计变量 */
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #fff;
+  --card-foreground: #0f172a;
+  --popover: #fff;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #fff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #eff4ff;
+  --accent-foreground: #1d4ed8;
+  --destructive: #dc2626;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #2563eb;
+  --sidebar: #fff;
+  --sidebar-foreground: #475569;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: #eff4ff;
+  --sidebar-accent-foreground: #1d4ed8;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #2563eb;
+  --success: #16a34a;
+  --success-weak: #dcfce7;
+  --warning: #d97706;
+  --warning-weak: #fef3c7;
+  --info: #2563eb;
+  --info-weak: #dbeafe;
+  --destructive-weak: #fee2e2;
+  --brand-ai: #6366f1;
+  --success-strong: #15803d;
+  --warning-strong: #b45309;
+  --destructive-strong: #b91c1c;
+  --info-strong: #1d4ed8;
+  --brand-ai-strong: #4f46e5;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-weak: var(--destructive-weak);
+  --color-destructive-strong: var(--destructive-strong);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-success: var(--success);
+  --color-success-weak: var(--success-weak);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-warning-weak: var(--warning-weak);
+  --color-warning-strong: var(--warning-strong);
+  --color-info: var(--info);
+  --color-info-weak: var(--info-weak);
+  --color-info-strong: var(--info-strong);
+  --color-brand-ai: var(--brand-ai);
+  --color-brand-ai-strong: var(--brand-ai-strong);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --font-sans: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* 常用组件类 */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
+.mono { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
+.regex-text { word-break: break-all; }
