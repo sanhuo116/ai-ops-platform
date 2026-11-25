@@ -15,7 +15,7 @@ export default function KwBatchTasks() {
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-5">
-      <div>
+      <div className="page-header">
         <h1>任务库 · 批量</h1>
         <p className="text-sm text-muted-foreground mt-1">历史全部批量任务批次，点开查看每条问句的进度与结果</p>
       </div>

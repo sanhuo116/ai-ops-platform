@@ -75,7 +75,7 @@ export default function TaskDetail() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/" className="rounded-lg border border-border p-2 hover:bg-secondary"><ArrowLeft size={16} /></Link>
-          <div>
+          <div className="page-header">
             <h1>{task.bot_name || `bot ${task.bot_id}`}</h1>
             <div className="text-sm text-muted-foreground mono">任务 {task.id} · bot {task.bot_id} · {STAGE_LABEL[task.stage]}
               {task.params?.callSource === 'upload' && (

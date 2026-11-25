@@ -65,6 +65,22 @@ npm start         # 启动服务 http://localhost:8787
 
 开发模式（前端热更）：`npm run dev`（5174 端口，/api 代理到 8787）。
 
+## 与 GitHub 同步（代码 + skill 快照）
+
+仓库：https://github.com/sanhuo116/ai-ops-platform （public，main 分支）
+
+**平台源码或其依赖的 skill 有任何变动后，执行一条命令即可同步：**
+
+```bash
+./scripts/sync_github.sh                          # 自动生成提交信息
+./scripts/sync_github.sh "feat: xxx 功能说明"      # 自定义提交信息
+```
+
+脚本做的事：① 把 `.agents/skills/` 里平台依赖的 5 个技能（guizeyouhua / huashubao / siyouhua-xunjianyouhua / jjwl-ls / saas-xunjian-tongyong）快照进 `skills/`（rsync --delete 全量对齐，本机绝对路径自动脱敏为 `<WORKSPACE>`）→ ② `git add -A` → ③ 提交（无变更则跳过）→ ④ 走本机代理（127.0.0.1:7897）推送。
+
+新增平台功能用到新 skill 时，编辑 `scripts/sync_github.sh` 顶部 `SKILLS=(...)` 清单加一行即可。`data/`（通话记录/数据库）永久不入库。
+
+
 ## 页面
 
 | 路径 | 内容 |

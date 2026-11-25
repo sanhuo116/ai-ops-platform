@@ -56,7 +56,7 @@ export default function KwBatch() {
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      <div>
+      <div className="page-header">
         <h1>关键词生成 · 批量</h1>
         <p className="text-sm text-muted-foreground mt-1">导入问句清单（每行一条，支持 .txt / .csv / .xlsx / .jsonl），自动逐条生成并验证；此处仅展示任务进度与状态。</p>
       </div>
