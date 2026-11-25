@@ -76,7 +76,7 @@ export default function TaskDetail() {
         <div className="flex items-center gap-3">
           <Link to="/" className="rounded-lg border border-border p-2 hover:bg-secondary"><ArrowLeft size={16} /></Link>
           <div>
-            <h1 className="text-xl font-semibold">{task.bot_name || `bot ${task.bot_id}`}</h1>
+            <h1>{task.bot_name || `bot ${task.bot_id}`}</h1>
             <div className="text-sm text-muted-foreground mono">任务 {task.id} · bot {task.bot_id} · {STAGE_LABEL[task.stage]}
               {task.params?.callSource === 'upload' && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-info-weak text-info-strong px-2 py-0.5 text-xs" title={`通话来源：上传文件 ${task.params?.uploadName || ''}`}>

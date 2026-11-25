@@ -28,7 +28,7 @@ export default function KwSingleTasks() {
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">任务库 · 单句</h1>
+          <h1>任务库 · 单句</h1>
           <p className="text-sm text-muted-foreground mt-1">历史提交的全部单句生成任务</p>
         </div>
         <div className="relative">

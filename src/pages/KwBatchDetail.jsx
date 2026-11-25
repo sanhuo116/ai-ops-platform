@@ -40,7 +40,7 @@ export default function KwBatchDetail() {
       <div className="flex items-center gap-3">
         <Link to="/kw/batch/tasks" className="text-muted-foreground hover:text-foreground"><ArrowLeft size={18} /></Link>
         <div className="flex-1">
-          <h1 className="text-xl font-semibold">{batch.name}</h1>
+          <h1>{batch.name}</h1>
           <p className="text-sm text-muted-foreground mt-0.5 mono text-xs">{batch.id} · {batch.filename || '粘贴文本'}</p>
         </div>
         <button onClick={retryFailed} disabled={batch.status === 'running' || !batch.failed}

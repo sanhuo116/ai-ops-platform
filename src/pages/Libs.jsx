@@ -32,9 +32,9 @@ export default function Libs() {
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">{meta.title}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{meta.desc}</p>
+      <div className="page-header">
+        <h1>{meta.title}</h1>
+        <p className="sub">{meta.desc}</p>
         {stats && (
           <div className="mt-3 flex gap-3 text-sm">
             <span className="rounded-lg bg-secondary px-3 py-1.5">{kind === 'branch' ? '分组' : '分组'} <b className="mono">{stats[kind]?.groups}</b></span>

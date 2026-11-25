@@ -134,9 +134,10 @@ export default function KwSingle() {
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">关键词生成 · 单句</h1>
-        <p className="text-sm text-muted-foreground mt-1">输入一句用户问句，自动生成 15 条泛化问句、10 条规避案例与三段式正则；可编辑后重跑验证。</p>
+      <div className="page-header">
+        <div className="eyebrow">Keyword Studio</div>
+        <h1>关键词生成 · 单句</h1>
+        <p className="sub">一句用户问句 → 15 条泛化问句 + 10 条规避案例 + 三段式正则（可编辑重跑）</p>
       </div>
 
       <div className="card p-4 space-y-3">

@@ -1,0 +1,29 @@
+{
+  "_说明": "九江文旅定时巡检配置。请把 platform 段的 company_id / robot_ids / cookie 填成实际值。",
+  "source": "local",
+  "data_dir": "/tmp/jjwl_e2e/data",
+  "output_dir": "/tmp/jjwl_e2e/outputs",
+  "report_title": "九江文旅 AI 通话质检报告",
+  "skip_existing": true,
+  "continue_on_error": true,
+  "platform": {
+    "base_url": "https://97702720.cos.byai.com",
+    "company_id": null,
+    "robot_ids": [],
+    "cookie": "",
+    "endpoint": "/bygw/call/api/callRecord/export",
+    "page_size": 5000
+  },
+  "dlc": {
+    "_说明": "source 改为 dlc 时生效。需要先在钥匙串录入腾讯云凭据。",
+    "company_id": null,
+    "robot_ids": [],
+    "where": ""
+  },
+  "schedule": {
+    "_说明": "每小时第 5 分钟抓上一个完整时段，避免边界数据未落库。",
+    "minute": 5,
+    "夜间合并段": "前一日19:00-当日08:00",
+    "白天时段": "08:00-19:00 每小时一段"
+  }
+}

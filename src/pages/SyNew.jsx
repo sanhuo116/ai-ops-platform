@@ -60,15 +60,14 @@ export default function SyNew() {
 
   return (
     <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">私有化话术包直优 · 任务提交</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          上传通话记录（百应线索导出 zip/xlsx，或 jsonl），提交 botId：自动完成 话术包导出 → 引擎构建 → 全量巡检 → badcase 正则优化（三轮回归）→ 四件套交付
-        </p>
+      <div className="page-header">
+        <div className="eyebrow">Private Bundle Optimizer</div>
+        <h1>私有化话术包直优 · 任务提交</h1>
+        <p className="sub">上传通话记录（zip/xlsx/jsonl）+ botId：自动完成 话术包导出 → 引擎构建 → 全量巡检 → 正则优化回归 → 四件套交付</p>
       </div>
 
       {taskId ? (
-        <div className="card p-5 space-y-3">
+        <div className="card card-hover p-5 space-y-3">
           <div className="flex items-center gap-2 text-success">
             <CheckCircle2 size={18} />
             <span className="font-medium">任务已创建：{taskId}</span>

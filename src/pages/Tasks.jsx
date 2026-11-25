@@ -23,19 +23,20 @@ export default function Tasks() {
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">巡检任务</h1>
-          <p className="text-sm text-muted-foreground mt-1">提交 botId，自动完成 话术包导出 → 近一月通话取数 → 巡检 → 待优化库</p>
+        <div className="page-header">
+          <div className="eyebrow">SaaS Inspection</div>
+          <h1>巡检任务</h1>
+          <p className="sub">提交 botId，自动完成 话术包导出 → 近一月通话取数 → 巡检 → 待优化库</p>
         </div>
         <button onClick={() => setShowForm(s => !s)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90">
           <Plus size={16} /> 新建巡检任务
         </button>
       </div>
 
       {showForm && <NewTask onDone={() => { setShowForm(false); load() }} />}
 
-      <div className="card overflow-hidden">
+      <div className="card card-hover overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-secondary/50 text-muted-foreground">
             <tr>
