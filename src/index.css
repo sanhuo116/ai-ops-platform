@@ -97,3 +97,40 @@ html, body, #root {
 .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
 .mono { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 12px; }
 .regex-text { word-break: break-all; }
+
+/* ===== 视觉优化层（product-design pass，仅样式，不改逻辑） ===== */
+:root {
+  --radius: 0.625rem;                       /* 圆角 8→10px，观感更柔和 */
+  --shadow-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px rgb(15 23 42 / 0.04);
+  --shadow-md: 0 2px 4px rgb(15 23 42 / 0.04), 0 6px 16px rgb(15 23 42 / 0.07);
+}
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* 卡片：细边 + 极浅投影，主层级更干净 */
+.card {
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow .18s ease, border-color .18s ease;
+}
+.card-hover:hover { box-shadow: var(--shadow-sm); border-color: color-mix(in oklab, var(--primary) 18%, var(--border)); }
+
+/* 页面标题区：统一节奏（12px eyebrow + 20px 标题 + 说明） */
+.page-header .eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent-foreground);
+}
+.page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin-top: 2px; }
+.page-header .sub { color: var(--muted-foreground); font-size: 13px; margin-top: 4px; }
+
+/* 按钮：统一过渡与可点感 */
+button, .btn, a[role="button"] { transition: background-color .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease, box-shadow .15s ease; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 45%, transparent); outline-offset: 2px;
+}
+
+/* 表格：斑马纹弱化 + 行 hover 一致 */
+table { border-collapse: separate; border-spacing: 0; }
+tbody tr:nth-child(even) { background: color-mix(in oklab, var(--secondary) 28%, transparent); }
+tbody tr:hover { background: color-mix(in oklab, var(--accent) 40%, transparent); }
+thead th { position: sticky; top: 0; background: color-mix(in oklab, var(--secondary) 55%, var(--card)); backdrop-filter: blur(4px); z-index: 1; }
+

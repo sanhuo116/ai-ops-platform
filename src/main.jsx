@@ -90,35 +90,42 @@ function Shell({ children }) {
   return (
     <div className="flex h-full">
       <aside className="w-56 shrink-0 border-r border-sidebar-border bg-sidebar hidden lg:flex flex-col">
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Bot size={18} />
+        <div className="flex items-center gap-2.5 px-5 py-[18px] border-b border-sidebar-border">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-primary text-primary-foreground shadow-sm">
+            <Bot size={17} />
           </div>
-          <div>
-            <div className="text-[15px] font-semibold leading-tight">政企部AI巡检中心</div>
-            <div className="text-xs text-muted-foreground">巡检报告 · 话术优化 · 关键词生成</div>
+          <div className="min-w-0">
+            <div className="text-[14px] font-semibold leading-tight tracking-tight">政企部AI巡检中心</div>
+            <div className="text-[11px] text-muted-foreground truncate">话术质量运营平台</div>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-3 overflow-auto">
+        <nav className="flex-1 px-3 py-3 space-y-2.5 overflow-auto">
           {navGroups.map(g => (
             <div key={g.label}>
-              {/* 一级分组：可点击折叠/展开，字体放大加粗 */}
+              {/* 一级分组：可点击折叠/展开 */}
               <button onClick={() => toggle(g.label)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[15px] font-bold text-foreground hover:opacity-80 transition">
-                {g.icon && <g.icon size={15} className="shrink-0" />}
+                className="group w-full flex items-center gap-2 px-3 py-1.5 text-left text-[13.5px] font-semibold text-foreground/90 hover:text-foreground transition">
+                {g.icon && <g.icon size={14} className="shrink-0 text-muted-foreground group-hover:text-accent-foreground transition-colors" />}
                 <span className="flex-1 truncate">{g.label}</span>
-                <ChevronDown size={14}
-                  className={`shrink-0 text-muted-foreground transition-transform ${openSet[g.label] ? '' : '-rotate-90'}`} />
+                <ChevronDown size={13}
+                  className={`shrink-0 text-muted-foreground/70 transition-transform duration-200 ${openSet[g.label] ? '' : '-rotate-90'}`} />
               </button>
-              {/* 二级菜单：折叠动画 + 字体缩小 */}
+              {/* 二级菜单 */}
               {openSet[g.label] && (
-                <div className="mt-0.5 space-y-0.5 pl-1">
+                <div className="mt-0.5 ml-[15px] space-y-px border-l border-sidebar-border pl-1.5">
                   {g.items.map(n => (
                     <NavLink key={n.to} to={n.to} end={n.end}
-                      className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] transition
-                        ${isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>
-                      <n.icon size={14} />
-                      {n.label}
+                      className={({ isActive }) => `relative flex items-center gap-2 rounded-lg px-2.5 py-[7px] text-[13px] transition
+                        ${isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>
+                      {({ isActive }) => (
+                        <>
+                          {isActive && <span className="absolute -left-[7px] top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-full bg-primary" />}
+                          <n.icon size={13.5} className="shrink-0" />
+                          <span className="truncate">{n.label}</span>
+                        </>
+                      )}
                     </NavLink>
                   ))}
                 </div>
@@ -126,15 +133,16 @@ function Shell({ children }) {
             </div>
           ))}
         </nav>
-        <div className="px-5 py-4 text-xs text-muted-foreground border-t border-sidebar-border">
-          <div>正则库来源：租户 67966（公安 SaaS 测试）</div>
-          <div className="mt-1">巡检执行：本地 skill 自动生成 DOCX</div>
-          <div className="mt-1">流水线：话术包 → 取数 → 巡检 → 待优化库</div>
+        <div className="px-5 py-3 text-[11px] leading-relaxed text-muted-foreground/80 border-t border-sidebar-border">
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success inline-block" />
+            正则库：租户 67966（公安 SaaS 测试）
+          </div>
         </div>
       </aside>
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
-          <div className="text-sm text-muted-foreground">政企 AI 外呼 · 话术质量运营</div>
+        <header className="h-14 border-b border-border bg-card/85 backdrop-blur flex items-center justify-between px-6">
+          <div className="text-[13px] text-muted-foreground">政企 AI 外呼 · 话术质量运营</div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-success inline-block" />
