@@ -11,7 +11,7 @@ SKILLS_SRC="$WORKSPACE/.agents/skills"
 MSG="${1:-}"
 
 # 平台依赖的 skill 清单（新 skill 加入平台功能后，在这里补一行）
-SKILLS=(guizeyouhua huashubao siyouhua-xunjianyouhua jjwl-ls saas-xunjian-tongyong)
+SKILLS=(guizeyouhua huashubao siyouhua-xunjianyouhua jjwl-ls saas-xunjian-tongyong voiceagent-evidence-driven-optimizer)
 
 echo "==> 1/4 同步 skill 快照"
 mkdir -p skills
@@ -36,9 +36,7 @@ git diff --cached --stat | tail -5
 
 echo "==> 3/4 提交"
 if [ -z "$MSG" ]; then
-  # 自动生成提交信息：按变更目录归纳
-  MAP=(["server"]="平台代码" ["src"]="平台代码" ["scripts"]="平台脚本" ["skills"]="skill快照" ["README.md"]="文档" ["package"]="依赖")
-  FIRST=$(git diff --cached --name-only | head -1)
+  # 自动生成提交信息
   MSG="sync: 平台与 skill 快照更新（$(date '+%F %H:%M')）"
 fi
 git commit -m "$MSG" | tail -1

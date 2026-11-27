@@ -10,7 +10,7 @@ const ACTION_META = {
   keep: { label: '保留', cls: 'bg-secondary text-secondary-foreground' },
   review: { label: '复核', cls: 'bg-info-weak text-info-strong' },
 }
-const SOURCE_META = { branch: '分支正则库', question: '问题库', kb: '知识库' }
+const SOURCE_META = { branch: '垒土-分支正则库', question: '垒土-问题正则库', kb: '知识库' }
 
 export default function TaskDetail() {
   const { id } = useParams()
@@ -160,8 +160,8 @@ export default function TaskDetail() {
               <select value={source} onChange={e => setSource(e.target.value)}
                 className="rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm">
                 <option value="">全部来源</option>
-                <option value="branch">分支正则库</option>
-                <option value="question">问题库</option>
+                <option value="branch">垒土-分支正则库</option>
+                <option value="question">垒土-问题正则库</option>
                 <option value="kb">知识库</option>
               </select>
               <div className="relative">

@@ -10,7 +10,7 @@ const STATUS_META = {
   failed: { label: '失败', cls: 'bg-destructive-weak text-destructive-strong', icon: XCircle },
 }
 
-// AI大模型质检 · 任务库：任务列表 + 按天报告（报告以天为维度）
+// Agent质检 · 任务库：任务列表 + 按天报告（报告以天为维度）
 export default function ZjTasks() {
   const [tasks, setTasks] = useState([])
 

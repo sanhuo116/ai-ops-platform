@@ -1,0 +1,4 @@
+interface:
+  display_name: "星球证据驱动BOT优化"
+  short_description: "结合反馈和历史通话建立金标、审查用例并持续全量回归"
+  default_prompt: "使用 $voiceagent-evidence-driven-optimizer 读取给定BOTID，基于真实来源测试并优化，保留完整过程。"

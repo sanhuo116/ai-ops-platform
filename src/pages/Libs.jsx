@@ -27,8 +27,8 @@ export default function Libs() {
   }
 
   const meta = kind === 'branch'
-    ? { title: '正则库（全局分支库）', desc: '节点分支引用的具名正则集合，巡检取词与补词建议的基准库', icon: Wrench }
-    : { title: '问题库', desc: '按用户问题语义组织的正则集合（标准问法 + 触发正则）', icon: FileStack }
+    ? { title: '垒土-分支正则库', desc: '垒土节点分支引用的具名正则集合，巡检取词与补词建议的基准库', icon: Wrench }
+    : { title: '垒土-问题正则库', desc: '按用户问题语义组织的正则集合（标准问法 + 触发正则）', icon: FileStack }
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">

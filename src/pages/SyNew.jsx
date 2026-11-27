@@ -1,4 +1,4 @@
-// SyNew.jsx —— 私有化话术包直优 · 任务提交入口
+// SyNew.jsx —— 私有化规则版话术优化 · 任务提交入口
 // 通话记录导入（zip/xlsx/csv/jsonl）+ botId 提交 → 任务执行（阶段+进度实时展示）
 import { useState, useRef } from 'react'
 import { Upload, Play, Loader2, CheckCircle2, AlertCircle, Phone, Bot, FileArchive } from 'lucide-react'
@@ -61,8 +61,8 @@ export default function SyNew() {
   return (
     <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
       <div className="page-header">
-        <div className="eyebrow">Private Bundle Optimizer</div>
-        <h1>私有化话术包直优 · 任务提交</h1>
+        <div className="eyebrow">Private Rule Optimizer</div>
+        <h1>私有化规则版话术优化 · 任务提交</h1>
         <p className="sub">上传通话记录（zip/xlsx/jsonl）+ botId：自动完成 话术包导出 → 引擎构建 → 全量巡检 → 正则优化回归 → 四件套交付</p>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ScanSearch, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
 
-// AI大模型质检 · 质检问题清单：按 bot 维度汇总问题，点查看进入证据明细
+// Agent质检 · 质检问题清单：按 bot 维度汇总问题，点查看进入证据明细
 export default function ZjIssues() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)

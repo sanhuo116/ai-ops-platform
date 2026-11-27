@@ -1,4 +1,4 @@
-// zjstore.mjs —— AI大模型质检任务存储（复用 store.mjs 的 db 连接）
+// zjstore.mjs —— Agent质检任务存储（复用 store.mjs 的 db 连接）
 import { db, now } from './store.mjs';
 
 db.exec(`CREATE TABLE IF NOT EXISTS zj_tasks (

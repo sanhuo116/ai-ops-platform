@@ -1,7 +1,7 @@
-// SyTasks.jsx —— 私有化话术包直优 · 执行结果（任务列表 + 详情四件套）
+// SyTasks.jsx —— 私有化规则版话术优化 · 执行结果（任务列表 + 详情四件套 + 质检问题回归发起）
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Download, FileSpreadsheet, FileText, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Download, FileSpreadsheet, FileText, Loader2, CheckCircle2, XCircle, Clock, FlaskConical } from 'lucide-react'
 
 const STAGE_LABEL = {
   pending: '排队中', import: '通话记录导入', bundle: '话术包导出', engine: '引擎构建',
@@ -43,7 +43,7 @@ export default function SyTasks() {
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div className="page-header">
-          <div className="eyebrow">Private Bundle Optimizer</div>
+          <div className="eyebrow">Private Rule Optimizer</div>
           <h1>执行结果</h1>
           <p className="sub">点开任务查看执行阶段、进度与四件套交付清单</p>
         </div>
@@ -180,6 +180,106 @@ export function SyTaskDetail() {
           </div>
         </div>
       )}
+
+      {/* 质检问题清单（可发起回归测试） */}
+      {t.status === 'done' && <QcProblems taskId={t.id} botId={t.bot_id} />}
+    </div>
+  )
+}
+
+// 质检问题清单：分页加载 + 每行「是否回归测试」
+function QcProblems({ taskId, botId }) {
+  const [data, setData] = useState(null)
+  const [page, setPage] = useState(1)
+  const [kind, setKind] = useState('')
+  const [kw, setKw] = useState('')
+  const [selected, setSelected] = useState({})   // problem key -> true
+  const [submitting, setSubmitting] = useState(false)
+  const [msg, setMsg] = useState('')
+  const load = async () => {
+    try {
+      const p = new URLSearchParams({ page, size: 15, kind, q: kw })
+      const r = await fetch(`/api/sy/tasks/${taskId}/problems?${p}`)
+      const d = await r.json()
+      setData(d.error ? null : d)
+    } catch { }
+  }
+  useEffect(() => { load() }, [taskId, page, kind, kw])
+  const selCount = Object.keys(selected).length
+  const toggle = key => setSelected(s => ({ ...s, [key]: !s[key] }))
+  async function submitRegression() {
+    setMsg(''); setSubmitting(true)
+    try {
+      // 类型预检：回归测试（voiceagent-evidence-driven-optimizer）仅支持大模型 Agent
+      const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(String(botId))}`)
+      const pd = await pr.json()
+      if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setMsg('✗ ' + (pd.message || '该 bot 不支持回归测试')); setSubmitting(false); return }
+      const problems = Object.keys(selected).filter(k => selected[k]).map(k => JSON.parse(k))
+      const r = await fetch('/api/ao/regressions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ botId: String(botId), sourceTaskId: taskId, problems }),
+      })
+      const d = await r.json()
+      if (d.error) throw new Error(d.error)
+      setMsg(`✓ 已发起 ${d.created} 条回归测试（Agent自动优化 → 质检回归测试 可查看状态）`)
+      setSelected({})
+    } catch (e) { setMsg('✗ ' + String(e.message || e)) }
+    setSubmitting(false)
+  }
+  if (!data) return null
+  return (
+    <div className="card p-5 space-y-3 shadow-sm">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="font-medium flex items-center gap-2"><FlaskConical size={16} className="text-amber-600" />质检问题清单（可发起回归测试）</div>
+        <div className="flex items-center gap-2">
+          <select className="input w-44 text-xs" value={kind} onChange={e => { setKind(e.target.value); setPage(1) }}>
+            <option value="">全部类型（{Object.values(data.kinds || {}).reduce((a, b) => a + b, 0)}）</option>
+            {Object.entries(data.kinds || {}).map(([k, n]) => <option key={k} value={k}>{k}（{n}）</option>)}
+          </select>
+          <input className="input w-44 text-xs" placeholder="搜节点/话术…" value={kw} onChange={e => { setKw(e.target.value); setPage(1) }} />
+        </div>
+      </div>
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full text-xs">
+          <thead className="bg-slate-50"><tr>
+            <th className="w-8"></th>
+            {['通话ID', '类型', '节点', '用户话术', '期望→实际', '回归'].map(h => <th key={h} className="text-left px-2 py-1.5 font-medium text-slate-500">{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {(data.rows || []).map((p, i) => {
+              const key = JSON.stringify({ id: p.id, kind: p.kind, node: p.node, expected: p.expected, actual: p.actual, detail: p.detail, bot: p.bot })
+              return (
+                <tr key={i} className={`border-t ${selected[key] ? 'bg-amber-50/50' : ''}`}>
+                  <td className="px-2 py-1.5"><input type="checkbox" checked={!!selected[key]} onChange={() => toggle(key)} /></td>
+                  <td className="px-2 py-1.5 mono">{p.id}</td>
+                  <td className="px-2 py-1.5"><span className="badge bg-slate-100 text-slate-600">{p.kind}</span></td>
+                  <td className="px-2 py-1.5">{p.node}</td>
+                  <td className="px-2 py-1.5 max-w-[220px] truncate" title={p.text}>{p.text}</td>
+                  <td className="px-2 py-1.5 text-slate-500">{p.expected || '-'} → {p.actual || '-'}</td>
+                  <td className="px-2 py-1.5">
+                    <button className={`text-xs flex items-center gap-1 ${selected[key] ? 'text-amber-600 font-medium' : 'text-slate-400 hover:text-amber-600'}`} onClick={() => toggle(key)}>
+                      <FlaskConical className="w-3.5 h-3.5" />{selected[key] ? '已选入' : '是否回归测试'}
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <div>共 {data.total} 条 · 已选 {selCount} 条加入优化测试 case 集</div>
+        <div className="flex items-center gap-2">
+          <button className="btn-ghost text-xs" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一页</button>
+          <span>第 {page} / {Math.max(1, Math.ceil(data.total / 15))} 页</span>
+          <button className="btn-ghost text-xs" disabled={page >= Math.ceil(data.total / 15)} onClick={() => setPage(p => p + 1)}>下一页</button>
+          <button className="btn-primary text-xs flex items-center gap-1" disabled={!selCount || submitting} onClick={submitRegression}>
+            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
+            发起回归测试（{selCount}）
+          </button>
+        </div>
+      </div>
+      {msg && <div className={`text-sm ${msg.startsWith('✓') ? 'text-emerald-600' : 'text-red-600'}`}>{msg} {msg.startsWith('✓') && <Link className="underline text-blue-600" to="/ao/regression">查看质检回归测试 →</Link>}</div>}
     </div>
   )
 }

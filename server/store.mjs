@@ -270,7 +270,7 @@ export function listKwBatches({ limit = 100, offset = 0 } = {}) {
   return db.prepare('SELECT * FROM kw_batches ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset);
 }
 
-// ============ 私有化话术包直优任务（sy_tasks） ============
+// ============ 私有化规则版话术优化任务（sy_tasks） ============
 db.exec(`CREATE TABLE IF NOT EXISTS sy_tasks (
   id TEXT PRIMARY KEY,
   bot_id TEXT NOT NULL,

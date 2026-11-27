@@ -112,7 +112,7 @@ function sendFile(filePath, chatId, retries = 3) {
 export function renderDaySummary(day, dayData, botLabel) {
   const sm = dayData.summary;
   const lines = [
-    `【AI大模型质检】${botLabel} · ${day}`,
+    `【Agent质检】${botLabel} · ${day}`,
     '',
     `- 通话总量：**${sm.total}** 通`,
     `- 合格：${sm.pass} 通　不合格：**${sm.fail}** 通（不合格率 ${sm.fail_rate ? (sm.fail_rate * 100).toFixed(1) : 0}%）`,
@@ -134,7 +134,7 @@ export function renderDaySummary(day, dayData, botLabel) {
     }
     if (bad.length > 40) lines.push(`- …其余 ${bad.length - 40} 通见平台「质检问题清单」`);
   }
-  lines.push('', `> 按天质检报告与逐条证据见平台：AI大模型质检 → 任务库 → ${botLabel}`);
+  lines.push('', `> 按天质检报告与逐条证据见平台：Agent质检 → 任务库 → ${botLabel}`);
   return lines.join('\n');
 }
 

@@ -1,4 +1,4 @@
-// zjengine.mjs —— AI大模型质检引擎桥（调 zhijian-all skill 的 Python 引擎）
+// zjengine.mjs —— Agent质检引擎桥（调 zhijian-all skill 的 Python 引擎）
 // 输入：任务目录（calls.jsonl）+ 动态场景包 → 质检明细/汇总 JSON + 按天分组
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,7 +19,7 @@ const SCENARIO_JSON = cfg => JSON.stringify({
 }, null, 1);
 
 const LEXICON_PY = cfg => `# -*- coding: utf-8 -*-
-# 动态场景词表（AI大模型质检 · 平台生成）
+# 动态场景词表（Agent质检 · 平台生成）
 INTERNAL_TERMS = []
 TONE_BAD = []
 TOPICS = []

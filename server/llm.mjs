@@ -72,3 +72,21 @@ export function parseJSONLoose(text) {
   }
   return null;
 }
+
+// 取最外层（第一个平衡对象）：适合顶层带集合键（turns/results/cases）而内层对象会干扰「取最后」策略的输出
+export function parseJSONOuter(text) {
+  if (!text) return null;
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const s = fence ? fence[1] : text;
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) { try { return JSON.parse(s.slice(start, i + 1)); } catch { return null; } } }
+  }
+  return null;
+}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, Upload, FileText, Plus, Trash2, Loader2, Send, MessageSquareText, BookOpen } from 'lucide-react'
 
-// AI大模型质检 · 需求提交：通用规则展示 + botId/提示词/知识库 + 自定义规则
+// Agent质检 · 需求提交：通用规则展示 + botId/提示词/知识库 + 自定义规则
 const SAMPLE_FALLBACK = ['抱歉，这个问题我还需要确认一下']
 
 export default function ZjNew() {
@@ -54,6 +54,11 @@ export default function ZjNew() {
     }
     setErr(''); setBusy(true)
     try {
+      // 类型预检：质检仅针对大模型 Agent，规则版引导至私有化话术包直优
+      const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(botId.trim())}`)
+      const pd = await pr.json()
+      if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setErr(pd.message || '该 bot 不支持质检'); setBusy(false); return }
+      if (pd && pd.error) { setErr(pd.error); setBusy(false); return }
       const body = {
         botId: botId.trim(), botName: botName.trim(), prompt: prompt,
         knowledgeBase: kbB64 || undefined, customRules: customRules.filter(r => r.name && r.pattern),
@@ -69,7 +74,7 @@ export default function ZjNew() {
     <div className="p-6 lg:p-8 max-w-[1080px] mx-auto space-y-6">
       <div className="page-header">
         <div className="eyebrow">AI Quality Inspection</div>
-        <h1>AI大模型质检 · 需求提交</h1>
+        <h1>Agent质检 · 需求提交</h1>
         <p className="sub">提交 botId 与提示词/知识库，基于 zhijian-all 通用规则集对全部通话做质检；报告按天产出并自动推送飞书</p>
       </div>
 

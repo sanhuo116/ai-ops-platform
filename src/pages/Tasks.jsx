@@ -161,7 +161,7 @@ function NewTask({ onDone }) {
           </select>
         </label>
         <div className="md:col-span-2 text-xs text-muted-foreground rounded-lg bg-secondary/50 px-3 py-2">
-          通话记录来源：平台取数（DLC 近 N 天，需数据租户号）。上传方式已移至「私有化话术包直优 · 任务提交入口」。
+          通话记录来源：平台取数（DLC 近 N 天，需数据租户号）。
         </div>
         <label className="block">
           <span className="text-sm font-medium">回看天数</span>

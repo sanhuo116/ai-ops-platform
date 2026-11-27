@@ -99,6 +99,18 @@ npm start         # 启动服务 http://localhost:8787
 | `/sy/tasks` | **私有化话术包直优 · 执行结果**：六阶段进度（导入→话术包导出→引擎构建→全量巡检→正则优化回归→四件套交付）、KPI、四件套下载 |
 | `/xs/new` | **相似问泛化 · 任务提交**：知识库表格上传（名称/分组/答案）+ 租户/bot/场景（九大场景+其他）+ 每条生成数 |
 | `/xs/tasks` | **相似问泛化 · 任务清单**：历史任务、生成预览（逐条相似问标签）、Excel/导入模板/文本版下载 |
+| `/ao/new` | **Agent自动优化 · 任务提交**：先选「是否外呼过」——已外呼：botId+租户ID；未外呼：botId+知识库/需求文档多份上传。提交即执行 voiceagent-evidence-driven-optimizer（基线→台账→测试集→freeze→真实跑测→逐案归因） |
+| `/ao/tasks` | **Agent自动优化 · 任务库**：任务目录与跑测状态（阶段/进度/逐案 PASS/FAIL/BLOCKED） |
+| `/ao/regression` | **Agent自动优化 · 质检回归测试**：回归清单——用例、真实跑测状态、审核结论、失败重试 |
+| `/sy/tasks/:id` 质检问题清单 | 全量巡检问题分页浏览，逐条「是否回归测试」勾选发起（仅大模型 Agent bot） |
+
+## Agent自动优化（voiceagent-evidence-driven-optimizer 平台化）
+
+- 适用范围：**仅大模型 Agent**（botFlowTypeCode 非 static_flow）。规则版（静态对话流）bot 提交时拦截并引导至「私有化话术包直优」；已删除 bot 同样拦截（`/api/bot/type` 预检 + 后端门禁）。
+- 两种模式：**已外呼**（botId+租户ID，质检问题作为测试集输入）/ **未外呼**（botId+知识库/需求文档多份上传，台账驱动设计）。
+- 执行链路：星球 CLI export 开发态配置基线 → 政策台账拆解（LLM，504 自动减半重试）→ 测试集逐案设计（expected_action 枚举归一化 + 台账模板兜底）→ lint+语义审核+freeze → SockJS 真实文本跑测 → 逐案 PASS/FAIL/BLOCKED 归因审核。修复写入（iteration.py）不自动执行，需用户明确授权。
+- 网关对策：全部 LLM 调用 NOTHINK+json_object；casebank 逐案生成；单案审核失败记 BLOCKED 不炸任务。
+- 质检回归：sy 巡检问题（通话ID）→ LLM 生成单案回归用例 → freeze → 真实跑测 → PASS/FAIL/BLOCKED。修复前 FAIL、修复后重测 PASS 即闭环。
 
 ## 相似问泛化（xiangshiwen-fanhua 平台化）
 

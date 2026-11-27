@@ -1,0 +1,17 @@
+{
+  "events": [
+    {
+      "type": "content",
+      "speaker": "AI",
+      "content": "Transfer received. Outside service hours.",
+      "stream": true,
+      "streamFinish": false,
+      "promptToolReplyMeta": {
+        "toolReply": true,
+        "toolType": "transfer",
+        "toolCode": "transferCall"
+      }
+    }
+  ],
+  "provenance": "Protocol-minimized and anonymized from two observed completed tool replies; not an original capture."
+}

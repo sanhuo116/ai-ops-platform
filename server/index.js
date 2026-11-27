@@ -459,7 +459,7 @@ route('GET', /^\/api\/xj\/requests\/([\w-]+)\/log$/, m => {
 
 route('GET', /^\/api\/xj\/templates$/, () => ok(TEMPLATE_EXEC));
 
-// ============ 私有化话术包直优（siyouhua-xunjianyouhua） ============
+// ============ 私有化规则版话术优化（siyouhua-xunjianyouhua） ============
 import { createSyTask, getSyTask, listSyTasks, updateSyTask } from './store.mjs';
 import { runSyTask } from './sypipeline.mjs';
 
@@ -542,7 +542,31 @@ for (const t of listSyTasks({ limit: 200 })) {
   }
 }
 
-route('GET', /^\/api\/sy\/tasks$/, (m, _b, q) => ok(listSyTasks({ limit: Math.min(200, Number(q.get('limit') || 100)) })));route('GET', /^\/api\/sy\/tasks\/([\w-]+)$/, m => {
+route('GET', /^\/api\/sy\/tasks$/, (m, _b, q) => ok(listSyTasks({ limit: Math.min(200, Number(q.get('limit') || 100)) })));
+// 质检问题清单（分页；供「是否回归测试」选择）
+route('GET', /^\/api\/sy\/tasks\/([\w-]+)\/problems$/, (m, _b, q) => {
+  const dir = path.join(SY_DIR, m[1]);
+  const file = path.join(dir, 'full_problems.json');
+  if (!fs.existsSync(file)) return notFound('该任务无质检问题数据');
+  const all = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const kind = (q.get('kind') || '').trim();
+  const kw = (q.get('q') || '').trim();
+  const page = Math.max(1, Number(q.get('page') || 1));
+  const size = Math.min(100, Number(q.get('size') || 20));
+  let rows = all;
+  if (kind) rows = rows.filter(p => p.kind === kind);
+  if (kw) rows = rows.filter(p => JSON.stringify({ n: p.node, t: p.text, e: p.expected, a: p.actual }).includes(kw));
+  const total = rows.length;
+  const slice = rows.slice((page - 1) * size, page * size).map(p => ({
+    id: p.id, bot: p.bot, kind: p.kind, node: p.node, path: p.path,
+    text: String(p.text || '').slice(0, 200), expected: p.expected, actual: p.actual,
+    detail: p.detail, hitRe: String(p.hitRe || '').slice(0, 160),
+  }));
+  const kinds = {};
+  for (const p of all) kinds[p.kind] = (kinds[p.kind] || 0) + 1;
+  return ok({ total, page, size, kinds, rows: slice });
+});
+route('GET', /^\/api\/sy\/tasks\/([\w-]+)$/, m => {
   const t = getSyTask(m[1]);
   if (!t) return notFound('任务不存在');
   let result = null;
@@ -578,7 +602,7 @@ route('GET', /^\/api\/sy\/tasks\/([\w-]+)\/deliverables\/([\w.-]+)$/, (m, _b, _q
 
 route('GET', /^\/api\/health$/, () => ok({ ok: true, time: new Date().toISOString() }));
 
-// ============ AI大模型质检（zhijian-all） ============
+// ============ Agent质检（zhijian-all） ============
 import { createZjTask, getZjTask, listZjTasks, updateZjTask } from './zjstore.mjs';
 import { runZjTask, zjTaskDir, ZJ_TASK_DIR } from './zjpipeline.mjs';
 import { loadZjConfig } from './zjnotify.mjs';
@@ -623,9 +647,12 @@ route('POST', /^\/api\/zj\/upload$/, async (m, body, q, req, headers) => {
 });
 
 // 提交质检任务
-route('POST', /^\/api\/zj\/tasks$/, (m, body) => {
+route('POST', /^\/api\/zj\/tasks$/, async (m, body) => {
   const botId = String(body.botId || '').trim();
   if (!/^\d+$/.test(botId)) return bad('botId 必须是数字');
+  // 大模型 Agent 边界门禁：规则版 bot 拦截并引导（质检仅针对大模型 Agent）
+  const guard = await checkLlmBot(botId);
+  if (!guard.ok) return bad(guard.message);
   const params = {
     botName: String(body.botName || '').trim(),
     tenantName: String(body.tenantName || '').trim(),
@@ -943,5 +970,195 @@ function scanXsFiles(id) {
   const dir = path.join(DATA_DIR_XS(), String(id));
   return fs.existsSync(dir) ? fs.readdirSync(dir).map(f => path.join(dir, f)).filter(f => fs.statSync(f).isFile()) : [];
 }
+
+// ============ Agent自动优化（voiceagent-evidence-driven-optimizer 平台化） ============
+import { createAoTask, updateAoTask, getAoTask, listAoTasks, createAoRegression, updateAoRegression, getAoRegression, listAoRegressions } from './aostore.mjs';
+import { runAoTask, runAoRegression, AO_UPLOAD_DIR } from './aorunner.mjs';
+import { checkLlmBot, checkLlmBotSync } from './botguard.mjs';
+
+// bot 类型预检（大模型 Agent / 规则版）：供前端提交前引导
+route('GET', /^\/api\/bot\/type$/, (m, _b, q) => {
+  const g = checkLlmBotSync(q.get('botId') || '');
+  if (!g.ok && g.reason === 'rule_bot') return ok({ type: 'rule', name: g.name, message: g.message });
+  if (!g.ok && g.reason === 'deleted') return ok({ type: 'deleted', name: g.name, message: g.message });
+  if (!g.ok) return bad(g.message);
+  return ok({ type: 'llm', name: g.name, flow: g.flow });
+});
+
+const aoId = () => `ao${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const aoQueue = [];
+let aoRunning = false;
+function aoEnqueue(id) { aoQueue.push(id); aoPump(); }
+function aoPump() {
+  if (aoRunning || !aoQueue.length) return;
+  const id = aoQueue.shift();
+  aoRunning = true;
+  const t = getAoTask(id);
+  if (!t || t.status === 'done' || t.status === 'failed') { aoRunning = false; return aoPump(); }
+  runAoTask(id, t, { log: m => console.log(`[ao ${id}]`, m) })
+    .catch(() => { })
+    .finally(() => { aoRunning = false; aoPump(); });
+}
+const aoRegQueue = [];
+let aoRegRunning = false;
+function aoRegEnqueue(id) { aoRegQueue.push(id); aoRegPump(); }
+function aoRegPump() {
+  if (aoRegRunning || !aoRegQueue.length) return;
+  const id = aoRegQueue.shift();
+  aoRegRunning = true;
+  const r = getAoRegression(id);
+  if (!r || ['pass', 'fail', 'blocked', 'error'].includes(r.status)) { aoRegRunning = false; return aoRegPump(); }
+  runAoRegression(id, { log: m => console.log(`[ao-reg ${id}]`, m) })
+    .catch(() => { })
+    .finally(() => { aoRegRunning = false; aoRegPump(); });
+}
+for (const t of listAoTasks({ limit: 200 })) {
+  if (t.status === 'running' || t.status === 'pending') updateAoTask(t.id, { status: 'failed', error: '服务重启中断，请重新提交', stage_detail: '已中断' });
+}
+for (const r of listAoRegressions({ limit: 500 })) {
+  if (r.status === 'running' || r.status === 'pending') updateAoRegression(r.id, { status: 'error', error: '服务重启中断，请重新发起', stage_detail: '已中断' });
+}
+
+// 需求/知识文档上传（未外呼模式，多份）
+route('POST', /^\/api\/ao\/upload$/, async (m, body, q, req, headers) => {
+  const ct = headers['content-type'] || '';
+  const bm = ct.match(/boundary=([^;]+)/);
+  if (!bm) return bad('需要 multipart/form-data');
+  const aoPrefix = (q.get('taskId') || '').trim();
+  const { file } = await parseMultipart(req, bm[1]);
+  if (!file) return bad('缺少文件字段 file');
+  const ext = path.extname(file.name).toLowerCase();
+  if (!['.xlsx', '.xls', '.csv', '.txt', '.md', '.docx', '.pdf', '.json'].includes(ext)) return bad(`不支持的文件类型 ${ext}`);
+  const dir = path.join(AO_UPLOAD_DIR, aoPrefix || 'pending');
+  fs.mkdirSync(dir, { recursive: true });
+  const stored = `${Date.now().toString(36)}${ext}`;
+  fs.writeFileSync(path.join(dir, stored), file.content);
+  let brief = '';
+  if (['.txt', '.md', '.csv', '.json'].includes(ext)) {
+    brief = fs.readFileSync(path.join(dir, stored), 'utf8').slice(0, 4000);
+  } else if (['.xlsx', '.xls'].includes(ext)) {
+    try {
+      const rows = parseKbTableSync(path.join(dir, stored));
+      brief = rows.slice(0, 40).map(r => `【${r.title}】${String(r.answer || '').slice(0, 120)}`).join('\n').slice(0, 4000);
+    } catch { brief = ''; }
+  }
+  return ok({ stored, name: file.name, size: file.content.length, brief });
+});
+
+function parseKbTableSync(fp) {
+  const PYp = process.env.DSH_PYTHON || path.join(process.env.HOME || '', '.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3');
+  const r = spawnSync(PYp, ['-c', `
+import json, sys
+rows = None
+if sys.argv[1].endswith('.csv'):
+    rows = [[c.strip() for c in l.split(',')] for l in open(sys.argv[1], encoding='utf-8', errors='replace').read().splitlines() if l.strip()]
+else:
+    from openpyxl import load_workbook
+    wb = load_workbook(sys.argv[1], read_only=True, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows = [['' if c is None else str(c).strip() for c in r] for r in ws.iter_rows(values_only=True)]
+def colfind(names, default0=False):
+    for i, h in enumerate(rows[0] if rows else []):
+        for n in names:
+            if n in str(h): return i
+    return 0 if default0 else -1
+ti = colfind(['标准问','知识库名称','问题','标题'], True)
+ai = colfind(['答案','知识库答案'])
+start = 1 if rows and any(rows[0]) else 0
+out = []
+for r in rows[start:]:
+    if len(r) <= ti or not r[ti]: continue
+    out.append({'title': r[ti], 'answer': r[ai] if ai >= 0 and len(r) > ai else ''})
+print(json.dumps(out, ensure_ascii=False))
+`, fp], { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 });
+  if (r.status !== 0) throw new Error((r.stderr || '').slice(0, 200));
+  return JSON.parse(r.stdout || '[]');
+}
+
+// 创建 Agent 自动优化任务
+route('POST', /^\/api\/ao\/tasks$/, async (m, body) => {
+  const botId = String(body.botId || '').trim();
+  if (!/^\d+$/.test(botId)) return bad('botId 必须是数字');
+  // 大模型 Agent 边界门禁：规则版 bot 拦截并引导
+  const guard = await checkLlmBot(botId);
+  if (!guard.ok) return bad(guard.message);
+  const mode = body.mode === 'called' ? 'called' : 'draft';
+  const tenantId = String(body.tenantId || '').trim();
+  if (mode === 'called' && !tenantId) return bad('已外呼模式需要租户 ID（用于数仓取数）');
+  const files = Array.isArray(body.files) ? body.files.slice(0, 10).map(f => ({ stored: String(f.stored || '').slice(0, 80), name: String(f.name || '').slice(0, 100) })) : [];
+  if (mode === 'draft' && !files.length) return bad('未外呼模式需要至少上传一份知识库或需求文档');
+  const requirementBrief = String(body.requirementBrief || '').slice(0, 8000);
+  const qcProblems = Array.isArray(body.qcProblems) ? body.qcProblems.slice(0, 200) : [];
+  const id = aoId();
+  createAoTask(id, {
+    name: String(body.name || '').slice(0, 60) || `Agent优化-${botId}`,
+    mode, botId, tenantId,
+    params: { files, requirementBrief, qcProblems, mode },
+  });
+  aoEnqueue(id);
+  return ok({ id }, 201);
+});
+
+route('GET', /^\/api\/ao\/tasks$/, (m, _b, q) => ok({ rows: listAoTasks({ limit: Math.min(200, Number(q.get('limit') || 100)) }) }));
+
+route('GET', /^\/api\/ao\/tasks\/([\w-]+)$/, m => {
+  const t = getAoTask(m[1]);
+  if (!t) return notFound('任务不存在');
+  return ok(t);
+});
+
+// 从质检问题发起回归测试（sy 巡检问题 → ao_regressions）
+route('POST', /^\/api\/ao\/regressions$/, async (m, body) => {
+  const botId = String(body.botId || '').trim();
+  if (!/^\d+$/.test(botId)) return bad('botId 必须是数字');
+  // 大模型 Agent 边界门禁：sy 巡检覆盖规则版与大模型 bot，规则版问题不进入回归
+  const guard = await checkLlmBot(botId);
+  if (!guard.ok) return bad(guard.message);
+  const items = Array.isArray(body.problems) ? body.problems.slice(0, 50) : [];
+  if (!items.length) return bad('未选择质检问题');
+  const created = [];
+  for (const p of items) {
+    const rid = `rg${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}${Math.random().toString(36).slice(2, 4)}`;
+    createAoRegression(rid, {
+      source: 'sy', sourceTaskId: String(body.sourceTaskId || '').slice(0, 40),
+      callId: String(p.id || p.callId || '').slice(0, 40), botId,
+      problemKind: String(p.kind || '').slice(0, 40),
+      problemBrief: String(p.detail || p.brief || `${p.kind || ''} 节点:${p.node || ''} 期望:${p.expected || ''} 实际:${p.actual || ''}`).slice(0, 800),
+      caseJson: p.case || null,
+      aoTaskId: String(body.aoTaskId || '').slice(0, 40),
+    });
+    created.push(rid);
+    aoRegEnqueue(rid);
+  }
+  return ok({ created: created.length, ids: created }, 201);
+});
+
+// 回归测试清单（质检回归测试页）
+route('GET', /^\/api\/ao\/regressions$/, (m, _b, q) => {
+  const taskId = q.get('taskId') || '';
+  const status = q.get('status') || '';
+  return ok({ rows: listAoRegressions({ taskId: taskId || undefined, status: status || undefined, limit: 300 }) });
+});
+
+route('GET', /^\/api\/ao\/regressions\/([\w-]+)$/, m => {
+  const r = getAoRegression(m[1]);
+  if (!r) return notFound('回归任务不存在');
+  return ok(r);
+});
+
+// 手动重试
+route('POST', /^\/api\/ao\/regressions\/([\w-]+)\/retry$/, m => {
+  const r = getAoRegression(m[1]);
+  if (!r) return notFound('回归任务不存在');
+  // 清理上次冻结/跑测产物（freeze 的 FREEZE_EXISTS 门禁要求目录干净）
+  const regDir = path.join(AO_UPLOAD_DIR, '..', 'ao-tasks', `reg-${m[1]}`);
+  if (fs.existsSync(regDir)) {
+    for (const f of ['frozen-bank.json']) { try { fs.unlinkSync(path.join(regDir, f)); } catch { } }
+    try { fs.rmSync(path.join(regDir, 'run'), { recursive: true, force: true }); } catch { }
+  }
+  updateAoRegression(m[1], { status: 'pending', error: '', stage_detail: '重新排队', progress: 0 });
+  aoRegEnqueue(m[1]);
+  return ok({ queued: true });
+});
 
 server.listen(PORT, () => console.log(`[regex-opt-platform] http://localhost:${PORT}`));

@@ -1,0 +1,21 @@
+{
+  "version": "1.0.1",
+  "last_verified": "2026-11-06",
+  "offline_tests": {
+    "passed": 44,
+    "command": "python3 -m unittest discover -s scripts -p 'test_*.py' -v"
+  },
+  "skill_structure_validation": "passed",
+  "verification_scope": {
+    "live_auth_and_export": "verified in an authorized deployment",
+    "isolated_text_session_and_review": "verified in an authorized deployment",
+    "inbound_metadata_and_log_query": "verified in an authorized deployment",
+    "source_scripts_changed_in_this_documentation_revision": false
+  },
+  "boundaries": [
+    "Login helper code is included; the full initial manual QR-login sequence was not rerun during packaging.",
+    "Portable write/rollback guards are tested offline; no fresh remote write was performed for documentation changes.",
+    "Other deployments, non-Prompt flows, complex knowledge writes, production publication and SIP/audio behavior require separate verification."
+  ],
+  "fixtures": "Anonymous protocol structures and synthetic test data; no customer configuration or transcript corpus is distributed."
+}

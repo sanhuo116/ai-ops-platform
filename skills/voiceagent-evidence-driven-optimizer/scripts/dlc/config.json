@@ -1,0 +1,123 @@
+{
+  "protocol": "tencent_tc3",
+  "endpoint": "https://dlc.tencentcloudapi.com",
+  "service": "dlc",
+  "version": "2021-01-25",
+  "region": "ap-shanghai",
+  "timeout_seconds": 30,
+  "poll_interval_seconds": 2,
+  "max_poll_seconds": 300,
+  "common_request": {},
+  "query": {
+    "sql_field": "Sql",
+    "sql_encoding": "base64",
+    "task_id_field": "TaskId",
+    "max_rows_field": null,
+    "default_max_rows": 1000,
+    "max_total_rows": 5000
+  },
+  "actions": {
+    "catalog": {
+      "action": "DescribeTables",
+      "request": {
+        "DatabaseName": "byai_bigdata",
+        "DatasourceConnectionName": "DataLakeCatalog",
+        "Limit": 100,
+        "Offset": 0,
+        "DescribeType": "permission"
+      },
+      "table_filter": {
+        "field": "Filters",
+        "name": "table-name"
+      },
+      "data_paths": [
+        "Response.TableList"
+      ]
+    },
+    "submit": {
+      "action": "CreateTask",
+      "request": {
+        "Task": {
+          "SparkSQLTask": {
+            "SQL": "",
+            "Config": []
+          }
+        },
+        "DatabaseName": "byai_bigdata",
+        "DatasourceConnectionName": "DataLakeCatalog",
+        "DataEngineName": "prod_monthly_dlc_01",
+        "ResourceGroupName": "default_test"
+      },
+      "sql_field_path": "Task.SparkSQLTask.SQL",
+      "sql_encoding": "base64",
+      "max_rows_field": null,
+      "task_id_paths": [
+        "Response.TaskId"
+      ]
+    },
+    "status": {
+      "action": "DescribeTaskResult",
+      "request": {},
+      "task_id_field": "TaskId",
+      "status_paths": [
+        "Response.TaskInfo.State"
+      ]
+    },
+    "result": {
+      "action": "DescribeTaskResult",
+      "request": {
+        "MaxResults": 1000,
+        "IsTransformDataType": true
+      },
+      "task_id_field": "TaskId",
+      "columns_paths": [
+        "Response.TaskInfo.ResultSchema"
+      ],
+      "rows_paths": [
+        "Response.TaskInfo.ResultSet"
+      ],
+      "data_paths": [
+        "Response.TaskInfo.ResultSet"
+      ],
+      "next_token_field": "NextToken",
+      "next_token_paths": [
+        "Response.TaskInfo.NextToken"
+      ],
+      "max_results_field": "MaxResults",
+      "max_results": 1000
+    },
+    "authorized-tables": {
+      "action": "DescribeUserInfo",
+      "request": {
+        "Type": "DataAuth"
+      },
+      "user_id_field": "UserId",
+      "limit_field": "Limit",
+      "offset_field": "Offset",
+      "page_size": 100,
+      "policy_set_paths": [
+        "Response.UserInfo.DataPolicyInfo.PolicySet"
+      ],
+      "total_count_paths": [
+        "Response.UserInfo.DataPolicyInfo.TotalCount"
+      ],
+      "policy_database_field": "Database",
+      "policy_catalog_field": "Catalog",
+      "policy_table_field": "Table",
+      "policy_view_field": "View",
+      "policy_type_field": "PolicyType",
+      "table_policy_types": [
+        "TABLE",
+        "VIEW",
+        "COLUMN"
+      ]
+    }
+  },
+  "success_statuses": [
+    "2"
+  ],
+  "failure_statuses": [
+    "-1",
+    "-3"
+  ]
+}

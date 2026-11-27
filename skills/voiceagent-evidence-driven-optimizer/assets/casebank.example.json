@@ -1,0 +1,19 @@
+[
+  {
+    "id": "example-only-001",
+    "category": "synthetic-boundary",
+    "source_refs": [
+      "SYNTHETIC-EXAMPLE-NOT-PRODUCTION-POLICY"
+    ],
+    "turns": [
+      {
+        "user": "示例：请解释符合条件A时的办理规则",
+        "expected": "示例占位：必须先替换为本BOT已核验的条件、结论及例外",
+        "forbidden": [
+          "不得把此示例当成真实政策"
+        ],
+        "expected_action": "none"
+      }
+    ]
+  }
+]

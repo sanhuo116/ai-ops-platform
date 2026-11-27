@@ -1,4 +1,4 @@
-// zjpipeline.mjs —— AI大模型质检任务管线
+// zjpipeline.mjs —— Agent质检任务管线
 // 阶段：export(话术包导出·bot信息) → fetch(通话取数) → inspect(zhijian-all 引擎) → deliver(按天报告落盘) → notify(飞书推送)
 // 铁律：宁可漏判不可误判（引擎内置守卫）；报告按天产出；每任务完成即推送飞书。
 import fs from 'node:fs';
@@ -194,7 +194,7 @@ sm = data["summary"]
 rules_names = json.loads(${JSON.stringify(JSON.stringify({ ...require_rule_names() }))})
 
 doc = Document()
-doc.add_heading(f"AI大模型质检报告 · {day}", 0)
+doc.add_heading(f"Agent质检报告 · {day}", 0)
 p = doc.add_paragraph()
 p.add_run(f"{bot}{tenant}　任务 {task_id}").bold = True
 
