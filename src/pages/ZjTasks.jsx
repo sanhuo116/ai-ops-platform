@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Loader2, Clock, CheckCircle2, XCircle, ChevronRight, Plus, FileText, Send, ArrowLeft } from 'lucide-react'
+import { Loader2, Clock, CheckCircle2, XCircle, ChevronRight, Plus, FileText, Send, ArrowLeft, FlaskConical } from 'lucide-react'
 
 const STAGE_LABEL = { pending: '排队', export: '话术包导出', fetch: '通话取数', inspect: '质检执行', deliver: '报告生成', notify: '飞书推送', done: '完成' }
 const STATUS_META = {
@@ -89,11 +89,14 @@ export default function ZjTasks() {
   )
 }
 
-// 质检任务详情：按天报告 + 问题证据明细
+// 质检任务详情：按天报告 + 问题证据明细（逐通话可发起回归测试）
 export function ZjTaskDetail() {
   const { id } = useParams()
   const [t, setT] = useState(null)
   const [issues, setIssues] = useState([])
+  const [regSel, setRegSel] = useState({})   // "rule|call_id|turn" -> true
+  const [regMsg, setRegMsg] = useState('')
+  const [regBusy, setRegBusy] = useState(false)
   const load = () => fetch(`/api/zj/tasks/${id}`).then(r => r.json()).then(setT).catch(() => { })
   useEffect(() => {
     load()
@@ -178,10 +181,13 @@ export function ZjTaskDetail() {
         </div>
       )}
 
-      {/* 问题证据 */}
+      {/* 问题证据（逐通话「是否回归测试」→ 进入大模型优化测试 case 集） */}
       {issues.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border text-sm font-semibold">质检问题（{issues.length} 类）</div>
+          <div className="px-5 py-3.5 border-b border-border text-sm font-semibold flex items-center justify-between">
+            <span>质检问题（{issues.length} 类）</span>
+            {t.status === 'done' && <span className="text-xs text-muted-foreground font-normal">勾选通话 → 发起回归测试（voiceagent-evidence-driven-optimizer 真实跑测）</span>}
+          </div>
           <div className="divide-y divide-border">
             {issues.map(g => (
               <details key={g.rule_id} className="group">
@@ -195,17 +201,73 @@ export function ZjTaskDetail() {
                   <ChevronRight size={14} className="text-muted-foreground transition-transform group-open:rotate-90" />
                 </summary>
                 <div className="px-5 pb-4 space-y-2.5">
-                  {g.samples.map((s, i) => (
-                    <div key={i} className="rounded-lg bg-secondary/30 p-3">
-                      <div className="text-xs text-muted-foreground mono">{s.call_id} · 轮次 {s.turn}</div>
-                      <div className="text-sm mt-1">「{s.evidence}」</div>
-                      {s.detail && <div className="text-xs text-muted-foreground mt-1">{s.detail}</div>}
-                    </div>
-                  ))}
+                  {g.samples.map((s, i) => {
+                    const key = `${g.rule_id}|${s.call_id}|${s.turn || 0}`
+                    const picked = !!regSel[key]
+                    return (
+                      <div key={i} className={`rounded-lg p-3 ${picked ? 'bg-amber-50/70 ring-1 ring-amber-300' : 'bg-secondary/30'}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs text-muted-foreground mono">{s.call_id} · 轮次 {s.turn}</div>
+                          {t.status === 'done' && (
+                            <button
+                              onClick={() => setRegSel(v => ({ ...v, [key]: !v[key] }))}
+                              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition ${picked ? 'bg-amber-500 text-white font-medium' : 'border border-border text-muted-foreground hover:border-amber-400 hover:text-amber-600'}`}>
+                              <FlaskConical size={12} /> {picked ? '已选入' : '是否回归测试'}
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-sm mt-1">「{s.evidence}」</div>
+                        {s.detail && <div className="text-xs text-muted-foreground mt-1">{s.detail}</div>}
+                      </div>
+                    )
+                  })}
                 </div>
               </details>
             ))}
           </div>
+          {t.status === 'done' && Object.values(regSel).some(Boolean) && (
+            <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-amber-50/40">
+              <span className="text-sm">已选 <b className="text-amber-600">{Object.values(regSel).filter(Boolean).length}</b> 条质检问题进入优化测试 case 集</span>
+              <button
+                disabled={regBusy}
+                onClick={async () => {
+                  setRegBusy(true); setRegMsg('')
+                  try {
+                    // 类型预检：回归仅支持大模型 Agent
+                    const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(String(t.bot_id))}`)
+                    const pd = await pr.json()
+                    if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setRegMsg('✗ ' + (pd.message || '该 bot 不支持回归测试')); setRegBusy(false); return }
+                    const items = Object.keys(regSel).filter(k => regSel[k]).map(k => {
+                      const [ruleId, callId, turn] = k.split('|')
+                      const g = issues.find(x => x.rule_id === ruleId)
+                      const smp = g?.samples?.find(s => String(s.call_id) === callId && String(s.turn || 0) === turn)
+                      return {
+                        id: callId, kind: `${ruleId} ${g?.rule_name || ''}`.trim(), node: `轮次${turn}`,
+                        expected: smp?.detail || '按提示词/知识库口径正确答复', actual: smp?.evidence || '',
+                        detail: `${g?.rule_name || ''}：${smp?.detail || smp?.evidence || ''}`.slice(0, 400),
+                        case: null,
+                      }
+                    })
+                    const r = await fetch('/api/ao/regressions', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ botId: String(t.bot_id), sourceTaskId: `zj:${t.id}`, problems: items }),
+                    })
+                    const d = await r.json()
+                    if (d.error) throw new Error(d.error)
+                    setRegMsg(`✓ 已发起 ${d.created} 条回归测试`)
+                    setRegSel({})
+                  } catch (e) { setRegMsg('✗ ' + String(e.message || e)) }
+                  setRegBusy(false)
+                }}
+                className="btn-primary text-sm inline-flex items-center gap-1.5">
+                {regBusy ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />}
+                发起回归测试（{Object.values(regSel).filter(Boolean).length}）
+              </button>
+            </div>
+          )}
+          {regMsg && <div className={`px-5 py-2.5 text-sm ${regMsg.startsWith('✓') ? 'text-emerald-600' : 'text-red-600'}`}>
+            {regMsg} {regMsg.startsWith('✓') && <Link className="underline text-primary" to="/ao/regression">查看质检回归测试 →</Link>}
+          </div>}
         </div>
       )}
 
