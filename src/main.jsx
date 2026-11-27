@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import { apiFetch, appPath } from './platform.js'
+import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { Wrench, FileStack, LayoutDashboard, KeyRound, MessageSquarePlus, Library, Layers, Inbox, FolderOpen, Package, Upload, FileCheck, ClipboardList, FileBarChart2, ChevronDown, ScanSearch, SlidersHorizontal, Sparkles, ListChecks, ShieldCheck, FileText, Bot, FilePlus2, FlaskConical } from 'lucide-react'
@@ -93,6 +94,10 @@ const navGroups = [
 
 function Shell({ children }) {
   const location = useLocation()
+  const [user, setUser] = useState(null)
+  useEffect(() => {
+    apiFetch('/api/auth/me').then(r => r.ok && r.json()).then(setUser).catch(() => {})
+  }, [])
   // 分组折叠：默认全部展开；点击标题切换
   const [openSet, setOpenSet] = useState(() => {
     const init = {}
@@ -105,7 +110,7 @@ function Shell({ children }) {
     <div className="flex h-full">
       <aside className="w-56 shrink-0 border-r border-sidebar-border bg-sidebar hidden lg:flex flex-col">
         <div className="flex items-center gap-2.5 px-5 py-[18px] border-b border-sidebar-border">
-          <img src="/favicon.svg" alt="logo" className="h-8 w-8 rounded-[10px] shadow-sm" />
+          <img src={appPath('/favicon.svg')} alt="logo" className="h-8 w-8 rounded-[10px] shadow-sm" />
           <div className="min-w-0">
             <div className="text-[14px] font-semibold leading-tight tracking-tight">政企部AI运营中心</div>
             <div className="text-[11px] text-muted-foreground truncate">话术质量运营平台</div>
@@ -158,8 +163,11 @@ function Shell({ children }) {
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-success inline-block" />
-              服务正常
+              {user?.name || 'AI 运营中心'}
             </span>
+            <form method="post" action={appPath('/auth/logout')}>
+              <button className="text-xs hover:underline" type="submit">退出工作台</button>
+            </form>
           </div>
         </header>
         <main className="flex-1 overflow-auto">{children}</main>
@@ -169,7 +177,7 @@ function Shell({ children }) {
 }
 
 createRoot(document.getElementById('root')).render(
-  <BrowserRouter>
+  <BrowserRouter basename={import.meta.env.BASE_URL}>
     <Shell>
       <Routes>
         <Route path="/" element={<TaskSubmit />} />

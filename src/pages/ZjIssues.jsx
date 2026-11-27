@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ScanSearch, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
@@ -7,7 +8,7 @@ export default function ZjIssues() {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const load = () => { setLoading(true); fetch('/api/zj/tasks').then(r => r.json()).then(setTasks).catch(() => { }).finally(() => setLoading(false)) }
+  const load = () => { setLoading(true); apiFetch('/api/zj/tasks').then(r => r.json()).then(setTasks).catch(() => { }).finally(() => setLoading(false)) }
   useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t) }, [])
 
   const done = tasks.filter(t => t.status === 'done')

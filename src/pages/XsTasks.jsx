@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 // XsTasks.jsx —— 相似问泛化 · 任务清单 + 详情（预览生成情况 / 下载三件套）
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
@@ -18,7 +19,7 @@ export default function XsTasks() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const load = async () => {
-    try { const r = await fetch('/api/xs/tasks'); const d = await r.json(); setRows(d.rows || []) } catch { }
+    try { const r = await apiFetch('/api/xs/tasks'); const d = await r.json(); setRows(d.rows || []) } catch { }
     setLoading(false)
   }
   useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t) }, [])
@@ -77,7 +78,7 @@ export function XsTaskDetail() {
   const [tab, setTab] = useState('preview')
   const load = async () => {
     try {
-      const r = await fetch(`/api/xs/tasks/${id}`)
+      const r = await apiFetch(`/api/xs/tasks/${id}`)
       if (r.status === 404) { setNotFound(true); return }
       const d = await r.json(); setT(d)
     } catch { }
@@ -101,9 +102,9 @@ export function XsTaskDetail() {
         </div>
         {t.status === 'done' && (
           <div className="flex items-center gap-2">
-            <a className="btn-ghost text-xs flex items-center gap-1" href={`/api/xs/tasks/${id}/download/tpl`}><Download className="w-3.5 h-3.5" />导入模板</a>
-            <a className="btn-ghost text-xs flex items-center gap-1" href={`/api/xs/tasks/${id}/download/txt`}><FileText className="w-3.5 h-3.5" />文本版</a>
-            <a className="btn-primary text-xs flex items-center gap-1" href={`/api/xs/tasks/${id}/download/xlsx`}><FileSpreadsheet className="w-3.5 h-3.5" />下载 Excel 结果</a>
+            <a className="btn-ghost text-xs flex items-center gap-1" href={appPath(`/api/xs/tasks/${id}/download/tpl`)}><Download className="w-3.5 h-3.5" />导入模板</a>
+            <a className="btn-ghost text-xs flex items-center gap-1" href={appPath(`/api/xs/tasks/${id}/download/txt`)}><FileText className="w-3.5 h-3.5" />文本版</a>
+            <a className="btn-primary text-xs flex items-center gap-1" href={appPath(`/api/xs/tasks/${id}/download/xlsx`)}><FileSpreadsheet className="w-3.5 h-3.5" />下载 Excel 结果</a>
           </div>
         )}
       </div>

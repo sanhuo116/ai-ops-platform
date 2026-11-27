@@ -60,10 +60,10 @@
 ```bash
 npm install       # 首次
 npm run build     # 构建前端（产物在 dist/）
-npm start         # 启动服务 http://localhost:8787
+npm start         # 启动本机后端，部署入口见下文 Nginx 部署与登录
 ```
 
-开发模式（前端热更）：`npm run dev`（5174 端口，/api 代理到 8787）。
+开发模式（前端热更）：`npm run dev`（5174 端口，应用基路径 /aiops/）。飞书登录走下文部署域名。
 
 ## 与 GitHub 同步（代码 + skill 快照）
 
@@ -210,3 +210,24 @@ LLM 配置：provider `byai`，baseURL `https://model.indata.cc/v1`，模型 `de
   （主色 #2563eb / 底色 #f8fafc / 白卡片 / 侧边栏 / shadcn 风格圆角与徽标）。
 - 线上模式需要：Chrome(CDP 9222) 登录百应后台 + 钥匙串 DLC 凭据 + 数据租户 company_id + 话术租户号 botTenant。
 - 节点命中轨迹依赖 AI 话术反推（通话记录无节点轨迹字段），系统提示音已排除。
+
+## 当前机器的 Nginx 部署与登录
+
+公网入口为 `http://spagent.indata.cc:5173/aiops/`。Nginx 将 `/aiops/` 和精确路径 `/ga/aiops-entry` 转发至本机 `127.0.0.1:8787`。子路径配置见 `deploy/aiops.nginx.conf`。在监听 5173 的现有 server 块中引入该文件后，运行 `nginx -t && nginx -s reload`。
+
+工作台经 `/ga/auth/feishu` 使用 AICRM 已登记的飞书回调。后端通过生产 GovAide 的 `/ga/api/auth/me` 校验账号与会话，沿用其启用状态和专用报表账号限制。AI Ops 会话使用独立的 HttpOnly Cookie，最长 8 小时。退出工作台或重启进程会清除对应的工作台会话。星球扫码属于 bot 操作授权，仍在工作台登录后使用。
+
+本机采用 macOS 用户 LaunchAgent 托管。首次安装可执行：
+
+```bash
+npm ci
+npm run build
+uv venv --python 3.11 "$HOME/Library/Application Support/aiops/venv"
+uv pip install --python "$HOME/Library/Application Support/aiops/venv/bin/python" -r skills/voiceagent-evidence-driven-optimizer/scripts/requirements.txt openpyxl python-docx xlrd pypdf
+python3 deploy/install-launch-agent.py
+launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/cc.indata.spagent.aiops.plist"
+```
+
+更新代码后运行 `npm run build` 和 `launchctl kickstart -k "gui/$(id -u)/cc.indata.spagent.aiops"`。服务日志位于 `~/Library/Logs/cc.indata.spagent.aiops/`。登录回归使用 `node --test tests/auth.test.mjs`。线上冒烟可检查 `/aiops/login` 返回 200、匿名请求 `/aiops/api/tasks` 返回 401，以及飞书登录后能回到原任务页面。
+
+首次部署可以空库启动。SaaS 规则巡检依赖原环境导出的 `data/seed/regexlib.json`，补齐后重启即可导入。巡检报告、Agent 质检及 DLC 取数另需相应执行器和业务凭据。

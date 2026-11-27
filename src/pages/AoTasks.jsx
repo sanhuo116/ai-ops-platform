@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 // AoTasks.jsx —— Agent自动优化 · 任务库（列表+详情） 与 质检回归测试（清单）
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
@@ -20,7 +21,7 @@ function RegBadge({ status }) {
 // ============ 任务库 ============
 export default function AoTasks() {
   const [rows, setRows] = useState([])
-  const load = async () => { try { const r = await fetch('/api/ao/tasks'); const d = await r.json(); setRows(d.rows || []) } catch { } }
+  const load = async () => { try { const r = await apiFetch('/api/ao/tasks'); const d = await r.json(); setRows(d.rows || []) } catch { } }
   useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t) }, [])
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
@@ -60,7 +61,7 @@ export default function AoTasks() {
 export function AoTaskDetail() {
   const { id } = useParams()
   const [t, setT] = useState(null)
-  const load = async () => { try { const r = await fetch(`/api/ao/tasks/${id}`); const d = await r.json(); setT(d.error ? null : d) } catch { } }
+  const load = async () => { try { const r = await apiFetch(`/api/ao/tasks/${id}`); const d = await r.json(); setT(d.error ? null : d) } catch { } }
   useEffect(() => { load(); const timer = setInterval(load, t?.status === 'running' || !t ? 2500 : 10000); return () => clearInterval(timer) }, [id, t?.status])
   if (!t) return <div className="p-6 text-sm text-slate-400">加载中…</div>
   const stat = t.result?.stat
@@ -89,7 +90,7 @@ export function AoTaskDetail() {
           <div className="rounded-lg border border-destructive/40 bg-destructive-weak p-3 text-sm text-destructive-strong flex items-center justify-between gap-3">
             <span>{t.error}</span>
             {/AUTH_REQUIRED|会话过期|登录/.test(t.error || '') && (
-              <a href="/planet/qr" target="_blank" className="btn-primary text-xs shrink-0 inline-flex items-center gap-1">扫码验证星球会话 →</a>
+              <a href={appPath('/planet/qr')} target="_blank" className="btn-primary text-xs shrink-0 inline-flex items-center gap-1">扫码验证星球会话 →</a>
             )}
           </div>
         )}
@@ -128,7 +129,7 @@ export function AoRegression() {
   const [rows, setRows] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
   const load = async () => {
-    try { const r = await fetch(`/api/ao/regressions${statusFilter ? `?status=${statusFilter}` : ''}`); const d = await r.json(); setRows(d.rows || []) } catch { }
+    try { const r = await apiFetch(`/api/ao/regressions${statusFilter ? `?status=${statusFilter}` : ''}`); const d = await r.json(); setRows(d.rows || []) } catch { }
   }
   useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t) }, [statusFilter])
   return (
@@ -159,12 +160,12 @@ export function AoRegression() {
                     {r.verdict && <span className={`font-medium ${r.verdict === 'PASS' ? 'text-emerald-600' : 'text-red-600'}`}>{r.verdict}</span>}
                     {r.rationale && <div className="text-slate-500 mt-0.5">{r.rationale}</div>}
                     {r.error && <div className="text-red-500 mt-0.5">{r.error.slice(0, 120)}
-                      {/AUTH_REQUIRED|会话过期|登录/.test(r.error || '') && <> · <a href="/planet/qr" target="_blank" className="underline text-blue-600">扫码验证 →</a></>}
+                      {/AUTH_REQUIRED|会话过期|登录/.test(r.error || '') && <> · <a href={appPath('/planet/qr')} target="_blank" className="underline text-blue-600">扫码验证 →</a></>}
                     </div>}
                   </td>
                   <td className="px-3 py-2 text-xs text-slate-400">{r.created_at}</td>
                   <td className="px-3 py-2">{['error', 'fail', 'blocked'].includes(r.status) && (
-                    <button className="btn-ghost text-xs flex items-center gap-1" onClick={async () => { await fetch(`/api/ao/regressions/${r.id}/retry`, { method: 'POST' }); load() }}><RotateCcw className="w-3.5 h-3.5" />重试</button>
+                    <button className="btn-ghost text-xs flex items-center gap-1" onClick={async () => { await apiFetch(`/api/ao/regressions/${r.id}/retry`, { method: 'POST' }); load() }}><RotateCcw className="w-3.5 h-3.5" />重试</button>
                   )}</td>
                 </tr>
               ))}

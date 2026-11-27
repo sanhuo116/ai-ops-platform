@@ -336,6 +336,9 @@ export async function runTask(taskId, task, io) {
     updateTask(taskId, { status: 'running', error: '' });
     log(`任务开始：bot=${task.bot_id}`);
 
+    if (!db.prepare("SELECT 1 FROM regexlib WHERE kind='branch' LIMIT 1").get()) {
+      throw new Error('待导入分支正则库，请管理员准备 data/seed/regexlib.json 后重启服务');
+    }
     // ---- 1) 话术包（huashubao）----
     let bundle;
     const seedBundle = task.params?.useSeed ? loadSeedBundle(task.bot_id) : null;

@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 // PlanetQr.jsx —— 星球扫码验证（飞书 SSO 二维码页面内展示）
 // 复刻星球登录页机制：LarkSSOSDKWebQRCode 渲染二维码 → 扫码后 passport 回调本平台
 // /planet/qr/callback?code=xxx → 后端代理换 cookie 写入星球 CLI 会话 → 页面轮询状态自动确认
@@ -29,7 +30,7 @@ export default function PlanetQr() {
     let stop = false
     const poll = async () => {
       try {
-        const r = await fetch('/api/planet/qr/status')
+        const r = await apiFetch('/api/planet/qr/status')
         const d = await r.json()
         if (stop) return
         if (d.valid) { setPhase('ok'); return true }
@@ -65,7 +66,7 @@ export default function PlanetQr() {
 
   // 拿回调地址（后端按当前 host 生成）
   useEffect(() => {
-    fetch('/api/planet/qr/start').then(r => r.json()).then(d => {
+    apiFetch('/api/planet/qr/start').then(r => r.json()).then(d => {
       if (!d.error) setCfg(d)
       else { setPhase('error'); setMsg(d.error) }
     }).catch(() => { })
@@ -74,7 +75,7 @@ export default function PlanetQr() {
   const redo = () => {
     setPhase('loading'); setMsg('')
     // 强制重探测 + 重新渲染二维码
-    fetch('/api/planet/qr/status').then(r => r.json()).then(d => {
+    apiFetch('/api/planet/qr/status').then(r => r.json()).then(d => {
       if (d.valid) setPhase('ok')
       else { setPhase('needscan'); setMsg(d.detail || '') }
       // 重渲染二维码
@@ -141,7 +142,7 @@ function ManualExchange() {
     if (!m) return setSt('✗ 链接中未找到 code 参数')
     try {
       // 走回调页同款兑换逻辑
-      const r = await fetch(`/api/planet/qr/exchange?code=${encodeURIComponent(m[1])}`)
+      const r = await apiFetch(`/api/planet/qr/exchange?code=${encodeURIComponent(m[1])}`)
       const d = await r.json()
       if (d.error) throw new Error(d.error)
       if (d.ok) setSt(`✓ 验证成功（${d.name || d.userId || ''}），会话已写入`)

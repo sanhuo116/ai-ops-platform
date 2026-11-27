@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RefreshCw, Search, Plus, FileText, Download, RotateCcw, Loader2, XCircle, Clock3, CheckCircle2 } from 'lucide-react'
@@ -25,7 +26,7 @@ export default function XjReports() {
   const load = useCallback(async () => {
     setLoading(true); setErr('')
     try {
-      const res = await fetch('/api/xj/requests')
+      const res = await apiFetch('/api/xj/requests')
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '加载失败')
       setRows(data.rows || [])
@@ -55,10 +56,10 @@ export default function XjReports() {
   }, [rows, filter, q])
 
   const retry = async id => {
-    await fetch(`/api/xj/requests/${id}/retry`, { method: 'POST' })
+    await apiFetch(`/api/xj/requests/${id}/retry`, { method: 'POST' })
     load()
   }
-  const download = id => { window.location.href = `/api/xj/requests/${id}/download` }
+  const download = id => { window.location.href = appPath(`/api/xj/requests/${id}/download`) }
 
   return (
     <div className="max-w-[1080px] mx-auto px-6 py-8">

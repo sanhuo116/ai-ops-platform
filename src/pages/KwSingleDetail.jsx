@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, RotateCcw, Loader2, Check, CircleAlert } from 'lucide-react'
@@ -11,7 +12,7 @@ export default function KwSingleDetail() {
   const [err, setErr] = useState('')
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/kw/tasks/${id}`)
+    const r = await apiFetch(`/api/kw/tasks/${id}`)
     if (!r.ok) return
     const d = await r.json()
     setTask(d)
@@ -30,7 +31,7 @@ export default function KwSingleDetail() {
   const rerun = async () => {
     setErr('')
     try {
-      const r = await fetch(`/api/kw/tasks/${id}/rerun`, {
+      const r = await apiFetch(`/api/kw/tasks/${id}/rerun`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ general: lists.general, negatives: lists.negatives, regex: lists.regex }),
       })
@@ -43,7 +44,7 @@ export default function KwSingleDetail() {
 
   const rerunAll = async () => {
     setErr(''); setDirty(false); setLists(null)
-    try { await fetch(`/api/kw/tasks/${id}/rerun`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }) } catch (e) { }
+    try { await apiFetch(`/api/kw/tasks/${id}/rerun`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }) } catch (e) { }
   }
 
   if (!task) return <div className="p-8 text-sm text-muted-foreground">加载中…</div>

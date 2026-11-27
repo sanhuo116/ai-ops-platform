@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FolderOpen, Loader2, CheckCircle2, XCircle, Download } from 'lucide-react'
@@ -7,7 +8,7 @@ export default function KwBatchTasks() {
   const nav = useNavigate()
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/kw/batches')
+    const r = await apiFetch('/api/kw/batches')
     const d = await r.json()
     setRows(d.rows || [])
   }, [])
@@ -62,7 +63,7 @@ export default function KwBatchTasks() {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground mono">{b.created_at}</td>
                   <td className="px-2">
-                    <a href={`/api/kw/batches/${b.id}/export`} download onClick={e => e.stopPropagation()}
+                    <a href={appPath(`/api/kw/batches/${b.id}/export`)} download onClick={e => e.stopPropagation()}
                       className="text-muted-foreground hover:text-primary" title="导出结果 xlsx"><Download size={15} /></a>
                   </td>
                 </tr>

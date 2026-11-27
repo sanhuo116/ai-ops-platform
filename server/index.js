@@ -1,5 +1,6 @@
 // server/index.js —— 平台 HTTP 服务：API + 静态资源 + 任务队列
 import http from 'node:http';
+import { authorize, BASE } from './auth.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +17,8 @@ const PORT = Number(process.env.PORT || 8787);
 
 // 启动时导入种子库
 const seeded = loadSeedLib();
-console.log('[seed] 正则库:', seeded.skipped ? `已存在（跳过）` : `已导入 分支${seeded.branches}+问题${seeded.questions}`);
+if (seeded.missing) console.warn('[seed] 缺少 data/seed/regexlib.json，正则库尚未初始化');
+else console.log('[seed] 正则库:', seeded.skipped ? `已存在（跳过）` : `已导入 分支${seeded.branches}+问题${seeded.questions}`);
 
 // 启动恢复：存量 failed 全部复活为 queued（失败绝不终态），再统一入队
 try {
@@ -799,9 +801,10 @@ function serveStatic(req, res, pathname) {
 
 // ---------- server ----------
 const server = http.createServer(async (req, res) => {
-  const u = new URL(req.url, 'http://x');
-  const pathname = u.pathname;
   try {
+    const u = new URL(req.url, 'http://local');
+    if (await authorize(req, res, u) !== true) return;
+    const pathname = u.pathname.slice(BASE.length);
     if (pathname.startsWith('/api/')) {
       const ct = req.headers['content-type'] || '';
       // multipart 上传：body 是二进制，跳过字符串预读，交给 handler 自己消费 req 流
@@ -1012,7 +1015,7 @@ import { planetQrAuthorizeUrl, planetSessionStatus, planetQrExchange } from './p
 route('GET', /^\/api\/planet\/qr\/start$/, (m, _b, _q, req) => {
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:8787';
   const proto = req.headers['x-forwarded-proto'] || 'http';
-  const redirectUri = `${proto}://${host}/planet/qr/callback`;
+  const redirectUri = `${proto}://${host}${BASE}/planet/qr/callback`;
   return ok({ redirectUri, authorizeUrl: planetQrAuthorizeUrl(redirectUri), clientId: 'cli_a6f7d833b67c5013' });
 });
 
@@ -1207,4 +1210,4 @@ route('POST', /^\/api\/ao\/regressions\/([\w-]+)\/retry$/, m => {
   return ok({ queued: true });
 });
 
-server.listen(PORT, () => console.log(`[regex-opt-platform] http://localhost:${PORT}`));
+server.listen(PORT, '127.0.0.1', () => console.log(`[aiops] http://127.0.0.1:${PORT}${BASE}/`));

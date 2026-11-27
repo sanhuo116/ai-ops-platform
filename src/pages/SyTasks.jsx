@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 // SyTasks.jsx —— 私有化规则版话术优化 · 执行结果（任务列表 + 详情四件套 + 质检问题回归发起）
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
@@ -33,7 +34,7 @@ function Status({ t }) {
 export default function SyTasks() {
   const [rows, setRows] = useState([])
   const [busy, setBusy] = useState(false)
-  const load = () => fetch('/api/sy/tasks').then(r => r.json()).then(setRows).catch(() => { })
+  const load = () => apiFetch('/api/sy/tasks').then(r => r.json()).then(setRows).catch(() => { })
   useEffect(() => {
     load()
     const t = setInterval(load, 3000)
@@ -78,7 +79,7 @@ export function SyTaskDetail() {
   const nav = useNavigate()
   const [t, setT] = useState(null)
   const [busy, setBusy] = useState(false)
-  const load = () => fetch(`/api/sy/tasks/${id}`).then(r => r.json()).then(setT).catch(() => { })
+  const load = () => apiFetch(`/api/sy/tasks/${id}`).then(r => r.json()).then(setT).catch(() => { })
   useEffect(() => {
     load()
     const timer = setInterval(load, 2500)
@@ -164,7 +165,7 @@ export function SyTaskDetail() {
             {DELIV.map(([key, name, Icon, desc]) => {
               const file = result.deliverables[key]
               return (
-                <a key={key} href={`/api/sy/tasks/${t.id}/deliverables/${key}`}
+                <a key={key} href={appPath(`/api/sy/tasks/${t.id}/deliverables/${key}`)}
                   className={`flex items-start gap-3 rounded-xl border p-4 transition ${file ? 'border-border hover:bg-secondary/50' : 'border-border opacity-50 pointer-events-none'}`}>
                   <Icon size={20} className="mt-0.5 text-primary shrink-0" />
                   <div className="min-w-0">
@@ -199,7 +200,7 @@ function QcProblems({ taskId, botId }) {
   const load = async () => {
     try {
       const p = new URLSearchParams({ page, size: 15, kind, q: kw })
-      const r = await fetch(`/api/sy/tasks/${taskId}/problems?${p}`)
+      const r = await apiFetch(`/api/sy/tasks/${taskId}/problems?${p}`)
       const d = await r.json()
       setData(d.error ? null : d)
     } catch { }
@@ -211,11 +212,11 @@ function QcProblems({ taskId, botId }) {
     setMsg(''); setSubmitting(true)
     try {
       // 类型预检：回归测试（voiceagent-evidence-driven-optimizer）仅支持大模型 Agent
-      const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(String(botId))}`)
+      const pr = await apiFetch(`/api/bot/type?botId=${encodeURIComponent(String(botId))}`)
       const pd = await pr.json()
       if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setMsg('✗ ' + (pd.message || '该 bot 不支持回归测试')); setSubmitting(false); return }
       const problems = Object.keys(selected).filter(k => selected[k]).map(k => JSON.parse(k))
-      const r = await fetch('/api/ao/regressions', {
+      const r = await apiFetch('/api/ao/regressions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ botId: String(botId), sourceTaskId: taskId, problems }),
       })

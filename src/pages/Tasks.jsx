@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Loader2, Play, Clock, CheckCircle2, XCircle, ListFilter } from 'lucide-react'
@@ -19,7 +20,7 @@ export function TaskSubmit() {
         <h1>任务提交</h1>
         <p className="sub">提交 botId，自动完成 话术包导出 → 近一月通话取数 → 巡检 → 待优化库；执行进度与结果请前往「任务库」查看</p>
       </div>
-      <NewTask onDone={() => { window.location.href = '/tasks' }} />
+      <NewTask onDone={() => { window.location.href = appPath('/tasks') }} />
     </div>
   )
 }
@@ -30,7 +31,7 @@ export default function Tasks() {
   const nav = useNavigate()
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/tasks'); setTasks(await r.json())
+    const r = await apiFetch('/api/tasks'); setTasks(await r.json())
   }, [])
   useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t) }, [load])
 
@@ -42,7 +43,7 @@ export default function Tasks() {
           <h1>任务库</h1>
           <p className="sub">全部巡检任务的执行进度与待优化库产出；新任务请前往「任务提交」</p>
         </div>
-        <a href="/" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90">
+        <a href={appPath('/')} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90">
           <Plus size={16} /> 新建巡检任务
         </a>
       </div>
@@ -124,7 +125,7 @@ function NewTask({ onDone }) {
     setBusy(true)
     try {
       const payload = { botId, companyId, botTenant, days, table, useSeed, minDuration: table === 'outbound' ? minDuration : 0 }
-      const r = await fetch('/api/tasks', {
+      const r = await apiFetch('/api/tasks', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })

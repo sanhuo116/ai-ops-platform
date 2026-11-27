@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, Loader2, Download, Search } from 'lucide-react'
@@ -23,12 +24,12 @@ export default function TaskDetail() {
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
-    const t = await (await fetch(`/api/tasks/${id}`)).json()
+    const t = await (await apiFetch(`/api/tasks/${id}`)).json()
     setTask(t)
     if (t.status === 'done') {
-      const r = await fetch(`/api/tasks/${id}/report`)
+      const r = await apiFetch(`/api/tasks/${id}/report`)
       if (r.ok) setReport(await r.json())
-      const o = await (await fetch(`/api/tasks/${id}/optimizations?q=${encodeURIComponent(q)}&source=${source}&limit=500`)).json()
+      const o = await (await apiFetch(`/api/tasks/${id}/optimizations?q=${encodeURIComponent(q)}&source=${source}&limit=500`)).json()
       setRows(o.rows); setTotal(o.total)
     }
   }, [id, q, source])
@@ -36,7 +37,7 @@ export default function TaskDetail() {
   useEffect(() => { load() }, [load])
   useEffect(() => {
     const t = setInterval(() => {
-      fetch(`/api/tasks/${id}`).then(r => r.json()).then(t2 => {
+      apiFetch(`/api/tasks/${id}`).then(r => r.json()).then(t2 => {
         setTask(prev => ({ ...t2, optCount: prev?.optCount }))
         if (t2.status === 'done' && !report) load()
         if (t2.status === 'failed') clearInterval(t)
@@ -47,7 +48,7 @@ export default function TaskDetail() {
 
   const rerun = async () => {
     setBusy(true)
-    await fetch(`/api/tasks/${id}/rerun`, { method: 'POST' })
+    await apiFetch(`/api/tasks/${id}/rerun`, { method: 'POST' })
     setReport(null); await load(); setBusy(false)
   }
 

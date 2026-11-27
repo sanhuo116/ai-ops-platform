@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { Search, ChevronRight, Wrench, FileStack } from 'lucide-react'
@@ -12,9 +13,9 @@ export default function Libs() {
   const [kw, setKw] = useState([])
 
   const load = useCallback(async () => {
-    const r = await (await fetch(`/api/lib/${kind}?q=${encodeURIComponent(q)}&limit=300`)).json()
+    const r = await (await apiFetch(`/api/lib/${kind}?q=${encodeURIComponent(q)}&limit=300`)).json()
     setRows(r.rows); setTotal(r.total)
-    const s = await (await fetch('/api/lib/stats')).json()
+    const s = await (await apiFetch('/api/lib/stats')).json()
     setStats(s)
   }, [kind, q])
 
@@ -22,7 +23,7 @@ export default function Libs() {
 
   const open = async id => {
     if (openId === id) { setOpenId(null); return }
-    const r = await (await fetch(`/api/lib/${kind}/${id}`)).json()
+    const r = await (await apiFetch(`/api/lib/${kind}/${id}`)).json()
     setKw(r.keywords); setOpenId(id)
   }
 

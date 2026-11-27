@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Loader2, Clock, CheckCircle2, XCircle, ChevronRight, Plus, FileText, Send, ArrowLeft, FlaskConical } from 'lucide-react'
@@ -14,7 +15,7 @@ const STATUS_META = {
 export default function ZjTasks() {
   const [tasks, setTasks] = useState([])
 
-  const load = () => fetch('/api/zj/tasks').then(r => r.json()).then(setTasks).catch(() => { })
+  const load = () => apiFetch('/api/zj/tasks').then(r => r.json()).then(setTasks).catch(() => { })
   useEffect(() => { load(); const t = setInterval(load, 2500); return () => clearInterval(t) }, [])
 
   return (
@@ -67,7 +68,7 @@ export default function ZjTasks() {
               {result?.days && Object.keys(result.days).length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {Object.entries(result.days).map(([day, d]) => (
-                    <a key={day} href={`/api/zj/tasks/${t.id}/reports/${day}`}
+                    <a key={day} href={appPath(`/api/zj/tasks/${t.id}/reports/${day}`)}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-xs hover:border-primary hover:text-primary transition-colors">
                       <FileText size={12} /> {day} 报告
                       <span className="text-muted-foreground">({d.summary?.total ?? 0} 通{d.summary?.fail ? ` · 不合格 ${d.summary.fail}` : ''})</span>
@@ -98,10 +99,10 @@ export function ZjTaskDetail() {
   const [regSel, setRegSel] = useState({})   // "rule|call_id|turn" -> true
   const [regMsg, setRegMsg] = useState('')
   const [regBusy, setRegBusy] = useState(false)
-  const load = () => fetch(`/api/zj/tasks/${id}`).then(r => r.json()).then(setT).catch(() => { })
+  const load = () => apiFetch(`/api/zj/tasks/${id}`).then(r => r.json()).then(setT).catch(() => { })
   useEffect(() => {
     load()
-    fetch(`/api/zj/tasks/${id}/issues`).then(r => r.json()).then(d => { setIssues(d.issues || []); setFindings(d.findings || []) }).catch(() => { })
+    apiFetch(`/api/zj/tasks/${id}/issues`).then(r => r.json()).then(d => { setIssues(d.issues || []); setFindings(d.findings || []) }).catch(() => { })
     const timer = setInterval(load, 2500)
     return () => clearInterval(timer)
   }, [id])
@@ -173,7 +174,7 @@ export function ZjTaskDetail() {
                     {d.summary?.total} 通 · 合格 {d.summary?.pass} · 不合格 <span className="text-destructive">{d.summary?.fail}</span> · 均分 {d.summary?.avg_score}
                   </div>
                 </div>
-                <a href={`/api/zj/tasks/${id}/reports/${day}`} className="view-btn">
+                <a href={appPath(`/api/zj/tasks/${id}/reports/${day}`)} className="view-btn">
                   <FileText size={13} /> 下载报告
                 </a>
               </div>
@@ -228,7 +229,7 @@ export function ZjTaskDetail() {
                   setRegBusy(true); setRegMsg('')
                   try {
                     // 类型预检：回归仅支持大模型 Agent
-                    const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(String(t.bot_id))}`)
+                    const pr = await apiFetch(`/api/bot/type?botId=${encodeURIComponent(String(t.bot_id))}`)
                     const pd = await pr.json()
                     if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setRegMsg('✗ ' + (pd.message || '该 bot 不支持回归测试')); setRegBusy(false); return }
                     const items = Object.keys(regSel).filter(k => regSel[k]).map(k => {
@@ -241,7 +242,7 @@ export function ZjTaskDetail() {
                         case: null,
                       }
                     })
-                    const r = await fetch('/api/ao/regressions', {
+                    const r = await apiFetch('/api/ao/regressions', {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ botId: String(t.bot_id), sourceTaskId: `zj:${t.id}`, problems: items }),
                     })

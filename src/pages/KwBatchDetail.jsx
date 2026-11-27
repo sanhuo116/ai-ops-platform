@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, CheckCircle2, XCircle, Clock, Download, RotateCcw } from 'lucide-react'
@@ -16,7 +17,7 @@ export default function KwBatchDetail() {
   const nav = useNavigate()
 
   const load = useCallback(async () => {
-    const r = await fetch(`/api/kw/batches/${id}`)
+    const r = await apiFetch(`/api/kw/batches/${id}`)
     if (!r.ok) return
     setBatch(await r.json())
   }, [id])
@@ -25,7 +26,7 @@ export default function KwBatchDetail() {
   const retryFailed = async () => {
     setMsg('')
     try {
-      const r = await fetch(`/api/kw/batches/${id}/retry-failed`, { method: 'POST' })
+      const r = await apiFetch(`/api/kw/batches/${id}/retry-failed`, { method: 'POST' })
       const d = await r.json()
       setMsg(r.ok ? `已提交 ${d.retried} 条失败项重试` : (d.error || '重试失败'))
     } catch (e) { setMsg(String(e.message)) }
@@ -48,7 +49,7 @@ export default function KwBatchDetail() {
           className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3.5 py-2 text-sm hover:bg-secondary disabled:opacity-40">
           <RotateCcw size={15} /> 重试失败项{batch.failed ? `（${batch.failed}）` : ''}
         </button>
-        <a href={`/api/kw/batches/${id}/export`} download
+        <a href={appPath(`/api/kw/batches/${id}/export`)} download
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
           <Download size={15} /> 导出结果
         </a>

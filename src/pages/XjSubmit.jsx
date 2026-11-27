@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, FileSpreadsheet, X, Building2, CalendarRange, ClipboardList, ArrowRight, Loader2, CheckCircle2, ShieldCheck, FileDown } from 'lucide-react'
@@ -87,7 +88,7 @@ export default function XjSubmit() {
 
     setSubmitting(true)
     try {
-      const res = await fetch('/api/xj/requests', { method: 'POST', body: fd })
+      const res = await apiFetch('/api/xj/requests', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `提交失败（${res.status}）`)
       showToast(`需求已提交，任务编号 ${data.id}`)

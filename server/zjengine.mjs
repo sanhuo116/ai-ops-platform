@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 
 const PY = process.env.DSH_PYTHON
   || path.join(process.env.HOME || '', '.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3');
-const SKILL_DIR = '/Users/zhuyanzhu/Documents/deepseek-harness/default-workspace/.agents/skills/zhijian-all';
+const SKILL_DIR = process.env.ZHIJIAN_SKILL_DIR || path.join(process.env.HOME, '.agents', 'skills', 'zhijian-all');
 
 // 场景包模板：通用 10 规则全启用；自定义规则经 rules_scene.py 注入
 const SCENARIO_JSON = cfg => JSON.stringify({

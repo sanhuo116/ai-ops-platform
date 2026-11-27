@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 // AoNew.jsx —— Agent自动优化 · 任务提交
 // 第一步选择：是否外呼/呼入过 → 已外呼(botId+租户ID) / 未外呼(botId+知识库/需求文档多份上传)
 import React, { useState, useRef } from 'react'
@@ -24,7 +25,7 @@ export default function AoNew() {
     try {
       for (const f of fs) {
         const fd = new FormData(); fd.append('file', f)
-        const r = await fetch('/api/ao/upload', { method: 'POST', body: fd })
+        const r = await apiFetch('/api/ao/upload', { method: 'POST', body: fd })
         const d = await r.json()
         if (d.error) throw new Error(d.error)
         setFiles(prev => [...prev, { stored: d.stored, name: d.name, brief: d.brief || '' }])
@@ -43,11 +44,11 @@ export default function AoNew() {
     setErr('')
     try {
       // 先做类型预检：质检与 Agent自动优化仅支持大模型 Agent，规则版引导至私有化话术包直优
-      const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(botId.trim())}`)
+      const pr = await apiFetch(`/api/bot/type?botId=${encodeURIComponent(botId.trim())}`)
       const pd = await pr.json()
       if (pd && pd.type === 'rule') { setErr(pd.message || '该 bot 是规则版，不属于大模型 Agent'); setSubmitting(false); return }
       if (pd && pd.error) { setErr(pd.error); setSubmitting(false); return }
-      const r = await fetch('/api/ao/tasks', {
+      const r = await apiFetch('/api/ao/tasks', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, mode, botId, tenantId, files, requirementBrief }),
       })

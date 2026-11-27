@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 // XsNew.jsx —— 相似问泛化 · 任务提交
 // 流程：上传知识库表格(xlsx/csv/txt) → 校验解析 → 填租户/bot/场景/每条数量 → 提交
 import React, { useState, useRef } from 'react'
@@ -38,7 +39,7 @@ export default function XsNew() {
     setUploading(true); setUploadErr(''); setKb([]); setKbName('')
     try {
       const fd = new FormData(); fd.append('file', f)
-      const r = await fetch('/api/xs/upload', { method: 'POST', body: fd })
+      const r = await apiFetch('/api/xs/upload', { method: 'POST', body: fd })
       const d = await r.json()
       if (d.error) throw new Error(d.error)
       setKb(d.items || []); setKbName(d.name || f.name)
@@ -54,7 +55,7 @@ export default function XsNew() {
     if (!/^\d+$/.test(botId.trim())) return setErr('botId 必须是数字')
     setSubmitting(true)
     try {
-      const r = await fetch('/api/xs/tasks', {
+      const r = await apiFetch('/api/xs/tasks', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, tenantId, botId, scene, perKb, kb }),
       })

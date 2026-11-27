@@ -100,10 +100,12 @@ export function now() {
 
 // ---------- 正则库 ----------
 export function loadSeedLib() {
-  const seed = JSON.parse(fs.readFileSync(path.join(DATA, 'seed', 'regexlib.json'), 'utf8'));
   const tx = db;
   const cntBr = tx.prepare("SELECT COUNT(*) c FROM regexlib WHERE kind='branch'").get().c;
   if (cntBr > 0) return { branches: cntBr, skipped: true };
+  const seedFile = path.join(DATA, 'seed', 'regexlib.json');
+  if (!fs.existsSync(seedFile)) return { missing: true };
+  const seed = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
   const insLib = tx.prepare(
     'INSERT INTO regexlib (id,kind,name,label,scenes,status,kw_count,gmt_modified,updated_at) VALUES (?,?,?,?,?,?,?,?,?)');
   const insKw = tx.prepare('INSERT INTO regex_kw (kw_id,lib_id,kind,text) VALUES (?,?,?,?)');

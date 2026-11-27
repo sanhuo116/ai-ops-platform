@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, Clock, CheckCircle2, XCircle, Sparkles, RotateCcw, Trash2, CircleAlert, Check } from 'lucide-react'
@@ -65,7 +66,7 @@ export default function KwSingle() {
   const nav = useNavigate()
 
   const load = useCallback(async (id) => {
-    const r = await fetch(`/api/kw/tasks/${id}`)
+    const r = await apiFetch(`/api/kw/tasks/${id}`)
     if (!r.ok) return
     const d = await r.json()
     setTask(d)
@@ -80,7 +81,7 @@ export default function KwSingle() {
     if (!q) return
     setErr(''); setTask(null); setLists(null); setDirty(false)
     try {
-      const r = await fetch('/api/kw/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) })
+      const r = await apiFetch('/api/kw/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) })
       const d = await r.json()
       if (!r.ok) { setErr(d.error || '提交失败'); return }
       setTaskId(d.id); load(d.id)
@@ -90,7 +91,7 @@ export default function KwSingle() {
   useEffect(() => {
     if (!taskId) return
     const t = setInterval(() => {
-      fetch(`/api/kw/tasks/${taskId}`).then(r => r.json()).then(d => {
+      apiFetch(`/api/kw/tasks/${taskId}`).then(r => r.json()).then(d => {
         setTask(d)
         if ((d.status === 'done' || d.status === 'failed') && d.result) {
           const r2 = d.result
@@ -108,7 +109,7 @@ export default function KwSingle() {
     if (!taskId || !lists) return
     setErr('')
     try {
-      const r = await fetch(`/api/kw/tasks/${taskId}/rerun`, {
+      const r = await apiFetch(`/api/kw/tasks/${taskId}/rerun`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ general: lists.general, negatives: lists.negatives, regex: lists.regex }),
       })
@@ -121,7 +122,7 @@ export default function KwSingle() {
     if (!taskId) return
     setErr(''); setDirty(false); setLists(null)
     try {
-      await fetch(`/api/kw/tasks/${taskId}/rerun`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      await apiFetch(`/api/kw/tasks/${taskId}/rerun`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
     } catch (e) { }
     // 全量重跑走轮询刷新
   }

@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Upload, Loader2, Clock, CheckCircle2, XCircle, Inbox } from 'lucide-react'
 
@@ -17,7 +18,7 @@ export default function KwBatch() {
   const fileRef = useRef(null)
 
   const load = useCallback(async (id) => {
-    const r = await fetch(`/api/kw/batches/${id}`)
+    const r = await apiFetch(`/api/kw/batches/${id}`)
     if (!r.ok) return
     setBatch(await r.json())
   }, [])
@@ -29,11 +30,11 @@ export default function KwBatch() {
       if (file) {
         const fd = new FormData()
         fd.append('file', file)
-        res = await fetch('/api/kw/batches', { method: 'POST', body: fd })
+        res = await apiFetch('/api/kw/batches', { method: 'POST', body: fd })
       } else {
         const questions = text.split('\n').map(s => s.trim()).filter(Boolean)
         if (!questions.length) { setErr('请粘贴问句或选择文件'); setBusy(false); return }
-        res = await fetch('/api/kw/batches', {
+        res = await apiFetch('/api/kw/batches', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ questions }),
         })

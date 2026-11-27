@@ -1,3 +1,4 @@
+import { apiFetch, appPath } from '../platform.js'
 // SyNew.jsx —— 私有化规则版话术优化 · 任务提交入口
 // 通话记录导入（zip/xlsx/csv/jsonl）+ botId 提交 → 任务执行（阶段+进度实时展示）
 import { useState, useRef } from 'react'
@@ -34,7 +35,7 @@ export default function SyNew() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const r = await fetch('/api/sy/upload', { method: 'POST', body: fd })
+      const r = await apiFetch('/api/sy/upload', { method: 'POST', body: fd })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || '上传失败')
       // 上传即返回（只落盘原始文件）；解析在任务「通话记录导入」阶段进行，进度见执行结果页
@@ -47,7 +48,7 @@ export default function SyNew() {
     if (!upload || !botId) return
     setSubmitting(true); setError('')
     try {
-      const r = await fetch('/api/sy/tasks', {
+      const r = await apiFetch('/api/sy/tasks', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ botId, uploadId: upload.uploadId, uploadName: upload.name }),
       })
@@ -73,7 +74,7 @@ export default function SyNew() {
             <span className="font-medium">任务已创建：{taskId}</span>
           </div>
           <p className="text-sm text-muted-foreground">执行进度请前往「执行结果」查看该任务详情。</p>
-          <a href={`#/sy/tasks`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90">
+          <a href={appPath('/sy/tasks')} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90">
             前往执行结果 →
           </a>
         </div>

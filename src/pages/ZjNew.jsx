@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldCheck, Upload, FileText, Plus, Trash2, Loader2, Send, MessageSquareText, BookOpen } from 'lucide-react'
@@ -19,7 +20,7 @@ export default function ZjNew() {
   const [err, setErr] = useState('')
   const [toast, setToast] = useState('')
 
-  useEffect(() => { fetch('/api/zj/rules').then(r => r.json()).then(setRules).catch(() => { }) }, [])
+  useEffect(() => { apiFetch('/api/zj/rules').then(r => r.json()).then(setRules).catch(() => { }) }, [])
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 2500); return () => clearTimeout(t) }, [toast])
 
   const pickKb = async e => {
@@ -55,7 +56,7 @@ export default function ZjNew() {
     setErr(''); setBusy(true)
     try {
       // 类型预检：质检仅针对大模型 Agent，规则版引导至私有化话术包直优
-      const pr = await fetch(`/api/bot/type?botId=${encodeURIComponent(botId.trim())}`)
+      const pr = await apiFetch(`/api/bot/type?botId=${encodeURIComponent(botId.trim())}`)
       const pd = await pr.json()
       if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setErr(pd.message || '该 bot 不支持质检'); setBusy(false); return }
       if (pd && pd.error) { setErr(pd.error); setBusy(false); return }
@@ -63,7 +64,7 @@ export default function ZjNew() {
         botId: botId.trim(), botName: botName.trim(), prompt: prompt,
         knowledgeBase: kbB64 || undefined, customRules: customRules.filter(r => r.name && r.pattern),
       }
-      const r = await fetch('/api/zj/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const r = await apiFetch('/api/zj/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json()
       if (!r.ok || d.error) { setErr(d.error || '提交失败'); setBusy(false); return }
       nav('/zj/tasks')

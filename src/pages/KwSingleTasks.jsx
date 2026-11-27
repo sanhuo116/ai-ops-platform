@@ -1,3 +1,4 @@
+import { apiFetch } from '../platform.js'
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Trash2 } from 'lucide-react'
@@ -9,7 +10,7 @@ export default function KwSingleTasks() {
   const nav = useNavigate()
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/kw/tasks?mode=single&limit=300')
+    const r = await apiFetch('/api/kw/tasks?mode=single&limit=300')
     const d = await r.json()
     setRows(d.rows || [])
   }, [])
@@ -18,7 +19,7 @@ export default function KwSingleTasks() {
   const del = async (e, id) => {
     e.stopPropagation()
     if (!confirm('删除该任务？')) return
-    await fetch(`/api/kw/tasks/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/kw/tasks/${id}`, { method: 'DELETE' })
     load()
   }
 
