@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 're
 import { Wrench, FileStack, LayoutDashboard, KeyRound, MessageSquarePlus, Library, Layers, Inbox, FolderOpen, Package, Upload, FileCheck, ClipboardList, FileBarChart2, ChevronDown, ScanSearch, SlidersHorizontal, Sparkles, ListChecks, ShieldCheck, FileText, Bot, FilePlus2, FlaskConical } from 'lucide-react'
 import AoNew from './pages/AoNew.jsx'
 import AoTasks, { AoTaskDetail, AoRegression } from './pages/AoTasks.jsx'
+import PlanetQr from './pages/PlanetQr.jsx'
 import Tasks, { TaskSubmit } from './pages/Tasks.jsx'
 import TaskDetail from './pages/TaskDetail.jsx'
 import Libs from './pages/Libs.jsx'
@@ -197,6 +198,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/ao/tasks" element={<AoTasks />} />
         <Route path="/ao/tasks/:id" element={<AoTaskDetail />} />
         <Route path="/ao/regression" element={<AoRegression />} />
+        <Route path="/planet/qr" element={<PlanetQr />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>

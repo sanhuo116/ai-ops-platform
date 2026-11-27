@@ -112,6 +112,13 @@ npm start         # 启动服务 http://localhost:8787
 - 网关对策：全部 LLM 调用 NOTHINK+json_object；casebank 逐案生成；单案审核失败记 BLOCKED 不炸任务。
 - 质检回归：sy 巡检问题（通话ID）→ LLM 生成单案回归用例 → freeze → 真实跑测 → PASS/FAIL/BLOCKED。修复前 FAIL、修复后重测 PASS 即闭环。
 
+## 星球扫码验证（飞书 SSO 页面内托管）
+
+- 页面 `/planet/qr`：与星球登录页同款机制——内嵌飞书 QRLogin 二维码（client_id `cli_a6f7d833b67c5013`），**飞书 App 扫码后直接在页面上完成验证**。
+- 流程：扫码 → 飞书 passport 授权 → 重定向回平台 `/planet/qr/callback?code=xxx` → 后端代理调星球 `/apiUser/common/feiShu/login` 换会话 cookie → 校验身份后写入本机星球 CLI 会话（`~/.local/share/byai-planet-cli/session.json`，600 权限）→ 页面轮询 `/api/planet/qr/status` 自动确认。
+- 任务失败信息含 `AUTH_REQUIRED/会话过期/登录` 时，详情页错误区显示「扫码验证星球会话 →」入口；Agent自动优化与 Agent质检链路通用。
+- 兜底：若平台回调域名不在星球飞书应用白名单导致扫码后未跳转，页面提供「手动粘贴回调链接」兑换入口（`/api/planet/qr/exchange`）。
+
 ## 相似问泛化（xiangshiwen-fanhua 平台化）
 
 「通话记录 zip + botId」之外的第二条批量生成线：为知识库条目按场景规范批量生成相似问。

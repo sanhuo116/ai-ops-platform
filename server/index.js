@@ -834,6 +834,21 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 404, { error: 'no route' });
     }
+    // 星球扫码验证回调（非 /api/ 前缀，需在静态服务前拦截）
+    if (pathname === '/planet/qr/callback') {
+      const u = new URL(req.url, 'http://x');
+      const result = await planetQrExchange(u.searchParams.get('code') || '');
+      const okPage = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>星球验证成功</title>
+<style>body{font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;margin:0}.card{background:#fff;border-radius:16px;padding:40px 48px;text-align:center;box-shadow:0 8px 30px rgba(15,23,42,.08)}.ok{width:56px;height:56px;border-radius:50%;background:#dcfce7;color:#16a34a;font-size:30px;line-height:56px;margin:0 auto 16px}.t{font-size:18px;font-weight:600;color:#0f172a}.s{font-size:13px;color:#64748b;margin-top:8px}</style></head>
+<body><div class="card"><div class="ok">✓</div><div class="t">星球验证成功</div><div class="s">会话已写入本机星球 CLI，页面可自动关闭</div></div>
+<script>setTimeout(function(){window.close()},2500)</script></body></html>`;
+      const failPage = (msg) => `<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>星球验证失败</title>
+<style>body{font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;background:#f8fafc;margin:0}.card{background:#fff;border-radius:16px;padding:40px 48px;text-align:center;box-shadow:0 8px 30px rgba(15,23,42,.08)}.bad{width:56px;height:56px;border-radius:50%;background:#fee2e2;color:#dc2626;font-size:30px;line-height:56px;margin:0 auto 16px}.t{font-size:18px;font-weight:600;color:#0f172a}.s{font-size:13px;color:#64748b;margin-top:8px;max-width:420px}</style></head>
+<body><div class="card"><div class="bad">✗</div><div class="t">星球验证失败</div><div class="s">${String(msg).replace(/[<>&]/g, '')}</div><div class="s">请回到平台页面刷新二维码重试</div>
+<script>setTimeout(function(){window.close()},6000)</script></body></html>`;
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end(result.ok ? okPage : failPage(result.message || '未知错误'));
+    }
     serveStatic(req, res, pathname);
   } catch (e) {
     console.error('[api]', e);
@@ -990,6 +1005,22 @@ function scanXsFiles(id) {
 import { createAoTask, updateAoTask, getAoTask, listAoTasks, createAoRegression, updateAoRegression, getAoRegression, listAoRegressions } from './aostore.mjs';
 import { runAoTask, runAoRegression, AO_UPLOAD_DIR } from './aorunner.mjs';
 import { checkLlmBot, checkLlmBotSync } from './botguard.mjs';
+import { planetQrAuthorizeUrl, planetSessionStatus, planetQrExchange } from './planetqr.mjs';
+
+// ============ 星球扫码验证（飞书 SSO） ============
+// 起始：返回本平台回调地址与飞书授权 URL（前端内嵌 QRLogin iframe 用）
+route('GET', /^\/api\/planet\/qr\/start$/, (m, _b, _q, req) => {
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:8787';
+  const proto = req.headers['x-forwarded-proto'] || 'http';
+  const redirectUri = `${proto}://${host}/planet/qr/callback`;
+  return ok({ redirectUri, authorizeUrl: planetQrAuthorizeUrl(redirectUri), clientId: 'cli_a6f7d833b67c5013' });
+});
+
+// 会话状态探测（供页面轮询：valid=false 且 auth_required=true 时展示二维码）
+route('GET', /^\/api\/planet\/qr\/status$/, () => ok(planetSessionStatus()));
+
+// 手动兑换（兜底：回调白名单拦截时，粘贴星球登录页回调链接的 code）
+route('GET', /^\/api\/planet\/qr\/exchange$/, async (m, _b, q) => ok(await planetQrExchange(q.get('code') || '')));
 
 // bot 类型预检（大模型 Agent / 规则版）：供前端提交前引导
 route('GET', /^\/api\/bot\/type$/, (m, _b, q) => {

@@ -85,7 +85,14 @@ export function AoTaskDetail() {
             <div key={s} className={`rounded-lg border px-2 py-1.5 text-xs text-center ${i < curStage || t.status === 'done' ? 'border-success/40 bg-success-weak text-success-strong' : i === curStage && t.status === 'running' ? 'border-info/40 bg-info-weak text-info-strong' : 'border-border text-muted-foreground'}`}>{STAGE_LABEL[s]}</div>
           ))}
         </div>
-        {t.status === 'failed' && <div className="rounded-lg border border-destructive/40 bg-destructive-weak p-3 text-sm text-destructive-strong">{t.error}</div>}
+        {t.status === 'failed' && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive-weak p-3 text-sm text-destructive-strong flex items-center justify-between gap-3">
+            <span>{t.error}</span>
+            {/AUTH_REQUIRED|会话过期|登录/.test(t.error || '') && (
+              <a href="/planet/qr" target="_blank" className="btn-primary text-xs shrink-0 inline-flex items-center gap-1">扫码验证星球会话 →</a>
+            )}
+          </div>
+        )}
         {t.result?.note && <div className="text-xs text-slate-500 bg-slate-50 rounded p-2">{t.result.note}</div>}
       </div>
 
@@ -151,7 +158,9 @@ export function AoRegression() {
                   <td className="px-3 py-2 text-xs max-w-[220px]">
                     {r.verdict && <span className={`font-medium ${r.verdict === 'PASS' ? 'text-emerald-600' : 'text-red-600'}`}>{r.verdict}</span>}
                     {r.rationale && <div className="text-slate-500 mt-0.5">{r.rationale}</div>}
-                    {r.error && <div className="text-red-500 mt-0.5">{r.error.slice(0, 120)}</div>}
+                    {r.error && <div className="text-red-500 mt-0.5">{r.error.slice(0, 120)}
+                      {/AUTH_REQUIRED|会话过期|登录/.test(r.error || '') && <> · <a href="/planet/qr" target="_blank" className="underline text-blue-600">扫码验证 →</a></>}
+                    </div>}
                   </td>
                   <td className="px-3 py-2 text-xs text-slate-400">{r.created_at}</td>
                   <td className="px-3 py-2">{['error', 'fail', 'blocked'].includes(r.status) && (

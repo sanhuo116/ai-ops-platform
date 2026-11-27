@@ -141,7 +141,7 @@ export async function runAoTask(taskId, task, { log = console.log } = {}) {
     // ① 配置基线（CLI export dev）
     upd({ status: 'running', stage: 'export', stage_detail: '星球 CLI export 开发态配置…', progress: 8 });
     const exp = py(['scripts/planet.py', 'export', botId, '--environment', 'dev', '--out', path.join(dir, 'baseline')], { timeoutMs: 600000 });
-    if (exp.code !== 0) throw new Error('export 失败：' + exp.out.slice(0, 300));
+    if (exp.code !== 0) throw new Error(/AUTH_REQUIRED/.test(exp.out) ? '星球会话已过期（AUTH_REQUIRED）：请到「扫码验证」页重新扫码授权' + ' :: ' + exp.out.slice(0, 120) : 'export 失败：' + exp.out.slice(0, 300));
     log(`配置基线完成 → baseline/`);
 
     // ② 问题输入整理
