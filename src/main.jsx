@@ -112,7 +112,7 @@ function Shell({ children }) {
             <Bot size={17} />
           </div>
           <div className="min-w-0">
-            <div className="text-[14px] font-semibold leading-tight tracking-tight">政企部AI巡检中心</div>
+            <div className="text-[14px] font-semibold leading-tight tracking-tight">政企部AI运营中心</div>
             <div className="text-[11px] text-muted-foreground truncate">话术质量运营平台</div>
           </div>
         </div>

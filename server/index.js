@@ -361,7 +361,7 @@ route('GET', /^\/api\/kw\/batches\/([\w-]+)\/export$/, (m, _b, _q, _req, _header
   }
 });
 
-// ============ 巡检报告中心（政企部AI巡检中心迁移） ============
+// ============ 巡检报告中心（政企部AI运营中心迁移） ============
 import { createRequest, updateRequest, getRequest, listRequests, countByStatus } from './xjstore.mjs';
 import { runRequest, retryRequest, ensureDirs as ensureXjDirs, XJ_DATA_DIR, TEMPLATE_EXEC } from './xjrunner.mjs';
 
