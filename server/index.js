@@ -578,6 +578,166 @@ route('GET', /^\/api\/sy\/tasks\/([\w-]+)\/deliverables\/([\w.-]+)$/, (m, _b, _q
 
 route('GET', /^\/api\/health$/, () => ok({ ok: true, time: new Date().toISOString() }));
 
+// ============ AI大模型质检（zhijian-all） ============
+import { createZjTask, getZjTask, listZjTasks, updateZjTask } from './zjstore.mjs';
+import { runZjTask, zjTaskDir, ZJ_TASK_DIR } from './zjpipeline.mjs';
+import { loadZjConfig } from './zjnotify.mjs';
+
+fs.mkdirSync(ZJ_TASK_DIR, { recursive: true });
+
+// 通用质检规则清单（zhijian-all 通用 10 条，提交页展示；每单默认全量写入）
+const ZJ_GENERIC_RULES = [
+  ['R01', 'AI沉默不回复', '红线', '空回复/提问后中断（转写缺失放行）'],
+  ['R02', '输出内部流程或依据', '红线', '向用户说出"根据知识库/大模型"等内部用语'],
+  ['R03', '口吻不符客服', '红线', '嘲讽、争吵等不符合客服口吻的表达'],
+  ['R04', '超出知识范围联想生成', '红线', '金额/事实无依据且未兜底（用户自述数字放行）'],
+  ['R07', '虚假处置或结果承诺', '扣分', '"保证/一定能"类承诺（否定语境放行）'],
+  ['R08', '给出未授权的联系方式', '红线', '号码不在白名单（第三方机构转述放行）'],
+  ['R11', '输出Markdown或内部格式', '红线', '语音场景输出不可朗读的格式符号'],
+  ['R12', '无效重复追问', '扣分', '同问题原文重复追问（固定播报放行）'],
+  ['R13', '转人工未响应', '扣分', '明说/紧急/投诉诉求无转接（转接或排队播报=成功）'],
+  ['R14', '无依据未兜底', '扣分', '过短回复且无事实/反问兜底（具体事实放行）'],
+];
+
+route('GET', /^\/api\/zj\/rules$/, () => ok({
+  generic: ZJ_GENERIC_RULES.map(([id, name, level, desc]) => ({ id, name, level, desc })),
+  custom: loadZjConfig().customRules || [],
+  feishuPush: loadZjConfig().feishuPush !== false,
+}));
+
+// 上传通话记录（xlsx/csv/jsonl）：落盘原始文件，解析在任务管线 fetch 阶段
+route('POST', /^\/api\/zj\/upload$/, async (m, body, q, req, headers) => {
+  const ct = headers['content-type'] || '';
+  const bm = ct.match(/boundary=([^;]+)/);
+  if (!bm) return bad('需要 multipart/form-data');
+  const { file } = await parseMultipart(req, bm[1]);
+  if (!file) return bad('缺少文件字段 file');
+  const ext = path.extname(file.name).toLowerCase();
+  if (!['.xlsx', '.xls', '.csv', '.jsonl'].includes(ext)) return bad(`不支持的文件类型 ${ext}（支持 xlsx/csv/jsonl）`);
+  const upId = `zu${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  fs.writeFileSync(path.join(UPLOADS, `${upId}${ext}`), file.content);
+  // 预解析计数（仅展示用；正式解析在任务管线里，错误可见可重试）
+  let calls = 0;
+  try { calls = parseCallFile(path.join(UPLOADS, `${upId}${ext}`)).length; } catch { }
+  return ok({ uploadId: upId, name: file.name, calls });
+});
+
+// 提交质检任务
+route('POST', /^\/api\/zj\/tasks$/, (m, body) => {
+  const botId = String(body.botId || '').trim();
+  if (!/^\d+$/.test(botId)) return bad('botId 必须是数字');
+  const params = {
+    botName: String(body.botName || '').trim(),
+    tenantName: String(body.tenantName || '').trim(),
+    prompt: String(body.prompt || ''),
+    kbBase64: body.knowledgeBase ? String(body.knowledgeBase) : '',
+    customRules: Array.isArray(body.customRules) ? body.customRules.slice(0, 10) : [],
+    days: Number(body.days) || 7,
+    table: body.table === 'inbound' ? 'inbound' : 'outbound',
+    callSource: body.uploadId ? 'upload' : 'fetch',
+  };
+  if (params.callSource === 'upload') {
+    const upId = String(body.uploadId || '').trim();
+    const upFiles = fs.readdirSync(UPLOADS).filter(f => f.startsWith(upId));
+    if (!upFiles.length) return bad('上传文件不存在或已过期，请重新上传');
+    params.uploadFile = path.join(UPLOADS, upFiles[0]);
+    params.uploadName = body.uploadName || upFiles[0];
+  } else {
+    if (!body.companyId || !/^\d+$/.test(String(body.companyId).trim())) return bad('平台取数需要 companyId（数据租户号）');
+    params.companyId = String(body.companyId).trim();
+  }
+  const id = `z${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  createZjTask(id, botId, params);
+  fs.mkdirSync(zjTaskDir(id), { recursive: true });
+  zjEnqueue(id);
+  return ok({ id }, 201);
+});
+
+// 质检任务串行队列（引擎 CPU 密集，同一时间只跑一个）
+const zjQueue = [];
+let zjRunning = false;
+function zjEnqueue(id) { zjQueue.push(id); zjPump(); }
+function zjPump() {
+  if (zjRunning || !zjQueue.length) return;
+  const id = zjQueue.shift();
+  zjRunning = true;
+  const t = getZjTask(id);
+  if (!t || t.status === 'done' || t.status === 'failed') { zjRunning = false; return zjPump(); }
+  runZjTask(id, t, { log: m => console.log(m) })
+    .catch(() => { })
+    .finally(() => { zjRunning = false; zjPump(); });
+}
+
+route('GET', /^\/api\/zj\/tasks$/, (m, _b, q) => ok(listZjTasks({ limit: Math.min(200, Number(q.get('limit') || 100)) }).map(t => {
+  let result = null;
+  try { result = t.result ? JSON.parse(t.result) : null; } catch { }
+  return { ...t, result, params: undefined };
+})));
+
+route('GET', /^\/api\/zj\/tasks\/([\w-]+)$/, m => {
+  const t = getZjTask(m[1]);
+  if (!t) return notFound('任务不存在');
+  let result = null;
+  try { result = t.result ? JSON.parse(t.result) : null; } catch { }
+  let log = [];
+  try {
+    const logFile = path.join(zjTaskDir(m[1]), 'run.log');
+    log = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean).slice(-40) : [];
+  } catch { }
+  return ok({ ...t, result, log });
+});
+
+// 质检问题清单（bot 维度聚合，含证据样例）
+function collectZjIssuesFallback(reports) {
+  const byRule = new Map();
+  for (const r of reports) {
+    for (const f of [...(r.redline_hits || []), ...(r.deductions || [])]) {
+      if (!byRule.has(f.rule_id)) byRule.set(f.rule_id, { rule_id: f.rule_id, rule_name: f.rule_name, level: f.level, calls: 0, callIds: new Set(), samples: [] });
+      const g = byRule.get(f.rule_id);
+      g.callIds.add(r.call_id); g.calls = g.callIds.size;
+      if (g.samples.length < 6) g.samples.push({ call_id: r.call_id, turn: f.turn_idx, evidence: (f.evidence || '').slice(0, 200), detail: (f.detail || '').slice(0, 200) });
+    }
+  }
+  return [...byRule.values()].map(({ callIds, ...rest }) => rest).sort((a, b) => b.calls - a.calls);
+}
+
+route('GET', /^\/api\/zj\/tasks\/([\w-]+)\/issues$/, m => {
+  const t = getZjTask(m[1]);
+  if (!t) return notFound('任务不存在');
+  let issues = [];
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(zjTaskDir(m[1]), 'issues.json'), 'utf8'));
+    issues = Array.isArray(raw) ? raw : (raw.issues || []);
+  } catch {
+    try {
+      const insp = JSON.parse(fs.readFileSync(path.join(zjTaskDir(m[1]), 'inspect.json'), 'utf8'));
+      issues = collectZjIssuesFallback(insp.reports);
+    } catch { }
+  }
+  return ok({ taskId: m[1], botId: t.bot_id, botName: t.bot_name, issues });
+});
+
+// 按天报告下载
+route('GET', /^\/api\/zj\/tasks\/([\w-]+)\/reports\/(\d{4}-\d{2}-\d{2})$/, (m, _b, _q, _req, _headers, res) => {
+  const t = getZjTask(m[1]);
+  if (!t) return notFound('任务不存在');
+  const file = path.join(zjTaskDir(m[1]), `AI质检报告_${m[2]}_${m[1]}.docx`);
+  if (!fs.existsSync(file)) return notFound('该日期报告尚未生成');
+  res.writeHead(200, {
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(path.basename(file))}`,
+  });
+  fs.createReadStream(file).pipe(res);
+});
+
+// 服务重启后遗留任务标记失败
+for (const t of listZjTasks({ limit: 200 })) {
+  if (t.status === 'running' || t.status === 'queued') {
+    updateZjTask(t.id, { status: 'failed', error: '服务重启导致任务中断，请重新提交', stage_detail: '已中断' });
+  }
+}
+
+
 // ---------- helpers ----------
 const json = (res, code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); };
 const ok = (data, code = 200) => ({ __json: true, code, data });
@@ -638,5 +798,150 @@ const server = http.createServer(async (req, res) => {
     json(res, 500, { error: String(e.message || e) });
   }
 });
+
+// ============ 相似问泛化（xiangshiwen-fanhua 平台化） ============
+import { createXsTask, updateXsTask, getXsTask, listXsTasks } from './xsstore.mjs';
+import { runXsTask, SCENES, XS_UPLOAD_DIR } from './xsrunner.mjs';
+
+const xsId = () => `xs${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+// 相似问任务串行队列（LLM 分批生成，避免并发限流）
+const xsQueue = [];
+let xsRunning = false;
+function xsEnqueue(id) { xsQueue.push(id); xsPump(); }
+function xsPump() {
+  if (xsRunning || !xsQueue.length) return;
+  const id = xsQueue.shift();
+  xsRunning = true;
+  const t = getXsTask(id);
+  if (!t || t.status === 'done' || t.status === 'failed') { xsRunning = false; return xsPump(); }
+  runXsTask(id, t, { log: msg => console.log(`[xs ${id}]`, msg) })
+    .catch(() => { })
+    .finally(() => { xsRunning = false; xsPump(); });
+}
+// 服务重启后遗留 running 任务标记失败
+for (const t of listXsTasks({ limit: 200 })) {
+  if (t.status === 'running' || t.status === 'pending') {
+    updateXsTask(t.id, { status: 'failed', error: '服务重启导致任务中断，请重新提交', stage_detail: '已中断' });
+  }
+}
+
+// 知识库表格上传：解析出 [{title, group, answer}]（列名兼容：标准问/知识库名称/问题、分组、答案/知识库答案）
+route('POST', /^\/api\/xs\/upload$/, async (m, body, q, req, headers) => {
+  const ct = headers['content-type'] || '';
+  const bm = ct.match(/boundary=([^;]+)/);
+  if (!bm) return bad('需要 multipart/form-data');
+  const { file } = await parseMultipart(req, bm[1]);
+  if (!file) return bad('缺少文件字段 file');
+  const ext = path.extname(file.name).toLowerCase();
+  if (!['.xlsx', '.xls', '.csv', '.txt'].includes(ext)) return bad(`不支持的文件类型 ${ext}（支持 xlsx/csv/txt）`);
+  const tmp = path.join(XS_UPLOAD_DIR, `xs${Date.now().toString(36)}${ext}`);
+  fs.writeFileSync(tmp, file.content);
+  // 用 python 解析表格 → [{title, group, answer}]
+  const { spawnSync } = await import('node:child_process');
+  const PY = process.env.DSH_PYTHON || path.join(process.env.HOME || '', '.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3');
+  const py = spawnSync(PY, ['-c', `
+import json, sys
+rows_raw = None
+if sys.argv[1].endswith(('.xlsx', '.xls')):
+    from openpyxl import load_workbook
+    wb = load_workbook(sys.argv[1], read_only=True, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    rows_raw = [['' if c is None else str(c).strip() for c in r] for r in ws.iter_rows(values_only=True)]
+else:
+    rows_raw = [[c.strip() for c in l.split(',')] for l in open(sys.argv[1], encoding='utf-8', errors='replace').read().splitlines() if l.strip()]
+def colfind(names):
+    for i, h in enumerate(rows_raw[0] if rows_raw else []):
+        for n in names:
+            if n in h: return i
+    return -1
+ti = colfind(['标准问', '知识库名称', '问题', '标题', 'title'])
+gi = colfind(['分组', '分类', 'group'])
+ai = colfind(['答案', '知识库答案', 'answer'])
+if ti < 0: ti = 0
+start = 1 if rows_raw and any(rows_raw[0]) else 0
+items, seen = [], set()
+for r in rows_raw[start:]:
+    if len(r) <= ti: continue
+    title = r[ti].strip()
+    if not title: continue
+    # 一格两条问句（换行分隔）拆分
+    for t in title.split('\\n'):
+        t = t.strip()
+        if not t: continue
+        key = t
+        if key in seen: continue
+        seen.add(key)
+        items.append({'title': t, 'group': (r[gi] if gi >= 0 and len(r) > gi else '').strip(), 'answer': (r[ai] if ai >= 0 and len(r) > ai else '').strip()})
+print(json.dumps(items, ensure_ascii=False))
+`, tmp], { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 });
+  fs.unlinkSync(tmp);
+  if (py.status !== 0) return bad(`解析失败：${(py.stderr || py.stdout || '').slice(0, 240)}`);
+  let items = [];
+  try { items = JSON.parse(py.stdout || '[]'); } catch { return bad('解析输出异常'); }
+  if (!items.length) return bad('表格中未解析到知识库条目（需包含 标准问/知识库名称 列）');
+  if (items.length > 500) items = items.slice(0, 500);
+  return ok({ items, count: items.length, name: file.name });
+});
+
+// 场景清单
+route('GET', /^\/api\/xs\/scenes$/, () => ok({ scenes: SCENES.map(x => ({ key: x.key, label: x.label, special: x.special || '' })) }));
+
+// 创建相似问任务
+route('POST', /^\/api\/xs\/tasks$/, (m, body) => {
+  const tenantId = String(body.tenantId || '').trim();
+  const botId = String(body.botId || '').trim();
+  if (!/^\d+$/.test(botId)) return bad('botId 必须是数字');
+  if (!tenantId) return bad('租户 ID 不能为空');
+  const scene = SCENES.find(x => x.key === body.scene) ? body.scene : 'other';
+  const perKb = Math.max(1, Math.min(50, Number(body.perKb) || 5));
+  const kb = Array.isArray(body.kb) ? body.kb.filter(x => x && String(x.title || '').trim()).map(x => ({ title: String(x.title).trim().slice(0, 120), group: String(x.group || '').trim().slice(0, 40), answer: String(x.answer || '').trim().slice(0, 2000) })) : [];
+  if (!kb.length) return bad('知识库条目为空，请先上传知识库表格');
+  if (kb.length > 500) return bad('知识库条目超过 500 条上限，请拆分提交');
+  const needTotal = kb.length * perKb;
+  if (needTotal > 4000) return bad(`生成总量 ${needTotal} 条超上限 4000，请降低每条数量或拆分`);
+  const id = xsId();
+  const sceneMeta = SCENES.find(x => x.key === scene);
+  createXsTask(id, { name: String(body.name || '').slice(0, 60) || `相似问-${sceneMeta.label}-${botId}`, tenantId, botId, scene, sceneLabel: sceneMeta.label, perKb, kbCount: kb.length, needTotal, params: { kb } });
+  const dir = path.join(DATA_DIR_XS(), String(id));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'kb.json'), JSON.stringify(kb));
+  xsEnqueue(id);
+  return ok({ id }, 201);
+});
+
+function DATA_DIR_XS() { return path.join(__dirname, '..', 'data', 'xs-tasks'); }
+
+// 任务清单
+route('GET', /^\/api\/xs\/tasks$/, (m, _b, q) => ok({ rows: listXsTasks({ limit: Math.min(200, Number(q.get('limit') || 100)) }) }));
+
+// 任务详情（含预览 items）
+route('GET', /^\/api\/xs\/tasks\/([\w-]+)$/, m => {
+  const t = getXsTask(m[1]);
+  if (!t) return notFound('任务不存在');
+  // 预览只回前 50 条 KB 的相似问（完整内容走下载）
+  if (t.result?.items?.length > 50) t.result.preview = t.result.items.slice(0, 50);
+  return ok(t);
+});
+
+// 下载交付物（xlsx / tpl / txt）
+route('GET', /^\/api\/xs\/tasks\/([\w-]+)\/download\/(xlsx|tpl|txt)$/, (m, _b, _q, _req, _headers, res) => {
+  const t = getXsTask(m[1]);
+  if (!t) return notFound('任务不存在');
+  if (t.status !== 'done') return bad('任务尚未完成');
+  const key = m[2];
+  const files = scanXsFiles(m[1]);
+  const map = { xlsx: f => !f.includes('导入模板') && f.endsWith('.xlsx'), tpl: f => f.includes('导入模板'), txt: f => f.endsWith('.txt') };
+  const file = files.find(map[key]);
+  if (!file) return notFound('交付物不存在');
+  const fname = path.basename(file);
+  const ctype = fname.endsWith('.xlsx') ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/plain; charset=utf-8';
+  res.writeHead(200, { 'Content-Type': ctype, 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fname)}` });
+  fs.createReadStream(file).pipe(res);
+});
+
+function scanXsFiles(id) {
+  const dir = path.join(DATA_DIR_XS(), String(id));
+  return fs.existsSync(dir) ? fs.readdirSync(dir).map(f => path.join(dir, f)).filter(f => fs.statSync(f).isFile()) : [];
+}
 
 server.listen(PORT, () => console.log(`[regex-opt-platform] http://localhost:${PORT}`));

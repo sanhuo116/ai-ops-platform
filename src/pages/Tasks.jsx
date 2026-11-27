@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Loader2, Play, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Loader2, Play, Clock, CheckCircle2, XCircle, ListFilter } from 'lucide-react'
 
 const STAGE_LABEL = { pending: '排队', export: '话术包导出', fetch: '通话取数', audit: '巡检', optimize: '生成待优化库', done: '完成' }
 const STATUS_META = {
@@ -10,9 +10,23 @@ const STATUS_META = {
   failed: { label: '重试中', cls: 'bg-info-weak text-info-strong', icon: Loader2, spin: true },
 }
 
+// 任务提交页（/）：只展示提交表单
+export function TaskSubmit() {
+  return (
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      <div className="page-header">
+        <div className="eyebrow">SaaS Inspection</div>
+        <h1>任务提交</h1>
+        <p className="sub">提交 botId，自动完成 话术包导出 → 近一月通话取数 → 巡检 → 待优化库；执行进度与结果请前往「任务库」查看</p>
+      </div>
+      <NewTask onDone={() => { window.location.href = '/tasks' }} />
+    </div>
+  )
+}
+
+// 任务库页（/tasks）：任务列表
 export default function Tasks() {
   const [tasks, setTasks] = useState([])
-  const [showForm, setShowForm] = useState(false)
   const nav = useNavigate()
 
   const load = useCallback(async () => {
@@ -25,16 +39,13 @@ export default function Tasks() {
       <div className="flex items-center justify-between">
         <div className="page-header">
           <div className="eyebrow">SaaS Inspection</div>
-          <h1>巡检任务</h1>
-          <p className="sub">提交 botId，自动完成 话术包导出 → 近一月通话取数 → 巡检 → 待优化库</p>
+          <h1>任务库</h1>
+          <p className="sub">全部巡检任务的执行进度与待优化库产出；新任务请前往「任务提交」</p>
         </div>
-        <button onClick={() => setShowForm(s => !s)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90">
+        <a href="/" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90">
           <Plus size={16} /> 新建巡检任务
-        </button>
+        </a>
       </div>
-
-      {showForm && <NewTask onDone={() => { setShowForm(false); load() }} />}
 
       <div className="card card-hover overflow-hidden">
         <table className="w-full text-sm">

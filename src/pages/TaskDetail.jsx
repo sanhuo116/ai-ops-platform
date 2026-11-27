@@ -74,7 +74,7 @@ export default function TaskDetail() {
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link to="/" className="rounded-lg border border-border p-2 hover:bg-secondary"><ArrowLeft size={16} /></Link>
+          <Link to="/tasks" className="rounded-lg border border-border p-2 hover:bg-secondary"><ArrowLeft size={16} /></Link>
           <div className="page-header">
             <h1>{task.bot_name || `bot ${task.bot_id}`}</h1>
             <div className="text-sm text-muted-foreground mono">任务 {task.id} · bot {task.bot_id} · {STAGE_LABEL[task.stage]}

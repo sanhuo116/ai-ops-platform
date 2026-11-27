@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
-import { Bot, Wrench, FileStack, LayoutDashboard, KeyRound, MessageSquarePlus, Library, Layers, Inbox, FolderOpen, Package, Upload, FileCheck, ClipboardList, FileBarChart2, ChevronDown, ScanSearch, SlidersHorizontal } from 'lucide-react'
-import Tasks from './pages/Tasks.jsx'
+import { Bot, Wrench, FileStack, LayoutDashboard, KeyRound, MessageSquarePlus, Library, Layers, Inbox, FolderOpen, Package, Upload, FileCheck, ClipboardList, FileBarChart2, ChevronDown, ScanSearch, SlidersHorizontal, Sparkles, ListChecks, ShieldCheck, FileText } from 'lucide-react'
+import Tasks, { TaskSubmit } from './pages/Tasks.jsx'
 import TaskDetail from './pages/TaskDetail.jsx'
 import Libs from './pages/Libs.jsx'
 import KwSingle from './pages/KwSingle.jsx'
@@ -15,6 +15,11 @@ import XjSubmit from './pages/XjSubmit.jsx'
 import XjReports from './pages/XjReports.jsx'
 import SyNew from './pages/SyNew.jsx'
 import SyTasks, { SyTaskDetail } from './pages/SyTasks.jsx'
+import ZjNew from './pages/ZjNew.jsx'
+import ZjIssues from './pages/ZjIssues.jsx'
+import ZjTasks, { ZjTaskDetail } from './pages/ZjTasks.jsx'
+import XsNew from './pages/XsNew.jsx'
+import XsTasks, { XsTaskDetail } from './pages/XsTasks.jsx'
 import './index.css'
 
 // 导航：分组 + 二级菜单
@@ -31,32 +36,44 @@ const navGroups = [
     label: 'saas巡检优化',
     icon: SlidersHorizontal,
     items: [
-      { to: '/', label: '巡检任务', icon: LayoutDashboard, end: true },
+      { to: '/', label: '任务提交', icon: ClipboardList, end: true },
+      { to: '/tasks', label: '任务库', icon: Library },
       { to: '/libs/branch', label: '分支正则库', icon: Wrench },
       { to: '/libs/question', label: '问题关键词库', icon: FileStack },
     ],
   },
   {
-    label: '关键词生成-单句',
+    label: '关键词生成',
     icon: KeyRound,
     items: [
-      { to: '/kw/single', label: '提交入口', icon: MessageSquarePlus, end: true },
-      { to: '/kw/single/tasks', label: '任务库', icon: Library },
+      { to: '/kw/single', label: '单句 · 提交入口', icon: MessageSquarePlus, end: true },
+      { to: '/kw/single/tasks', label: '单句 · 任务库', icon: Library },
+      { to: '/kw/batch', label: '批量 · 提交入口', icon: Inbox, end: true },
+      { to: '/kw/batch/tasks', label: '批量 · 任务库', icon: FolderOpen },
     ],
   },
   {
-    label: '关键词生成-批量',
-    icon: Layers,
+    label: '相似问泛化',
+    icon: Sparkles,
     items: [
-      { to: '/kw/batch', label: '提交入口', icon: Inbox, end: true },
-      { to: '/kw/batch/tasks', label: '任务库', icon: FolderOpen },
+      { to: '/xs/new', label: '任务提交', icon: Sparkles, end: true },
+      { to: '/xs/tasks', label: '任务清单', icon: ListChecks },
+    ],
+  },
+  {
+    label: 'AI大模型质检',
+    icon: ShieldCheck,
+    items: [
+      { to: '/zj/new', label: '需求提交', icon: FileText, end: true },
+      { to: '/zj/issues', label: '质检问题清单', icon: ScanSearch },
+      { to: '/zj/tasks', label: '任务库', icon: Library },
     ],
   },
   {
     label: '私有化话术包直优',
     icon: Package,
     items: [
-      { to: '/sy/new', label: '任务提交入口', icon: Upload, end: true },
+      { to: '/sy/new', label: '任务提交', icon: Upload, end: true },
       { to: '/sy/tasks', label: '执行结果', icon: FileCheck },
     ],
   },
@@ -160,7 +177,7 @@ createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <Shell>
       <Routes>
-        <Route path="/" element={<Tasks />} />
+        <Route path="/" element={<TaskSubmit />} />
         <Route path="/xj/submit" element={<XjSubmit />} />
         <Route path="/xj/reports" element={<XjReports />} />
         <Route path="/tasks" element={<Tasks />} />
@@ -175,6 +192,13 @@ createRoot(document.getElementById('root')).render(
         <Route path="/sy/new" element={<SyNew />} />
         <Route path="/sy/tasks" element={<SyTasks />} />
         <Route path="/sy/tasks/:id" element={<SyTaskDetail />} />
+        <Route path="/zj/new" element={<ZjNew />} />
+        <Route path="/zj/issues" element={<ZjIssues />} />
+        <Route path="/zj/tasks" element={<ZjTasks />} />
+        <Route path="/zj/tasks/:id" element={<ZjTaskDetail />} />
+        <Route path="/xs/new" element={<XsNew />} />
+        <Route path="/xs/tasks" element={<XsTasks />} />
+        <Route path="/xs/tasks/:id" element={<XsTaskDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>
