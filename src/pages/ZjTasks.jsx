@@ -94,13 +94,14 @@ export function ZjTaskDetail() {
   const { id } = useParams()
   const [t, setT] = useState(null)
   const [issues, setIssues] = useState([])
+  const [findings, setFindings] = useState([])   // 全部问题明细（逐通话逐轮，不聚合）
   const [regSel, setRegSel] = useState({})   // "rule|call_id|turn" -> true
   const [regMsg, setRegMsg] = useState('')
   const [regBusy, setRegBusy] = useState(false)
   const load = () => fetch(`/api/zj/tasks/${id}`).then(r => r.json()).then(setT).catch(() => { })
   useEffect(() => {
     load()
-    fetch(`/api/zj/tasks/${id}/issues`).then(r => r.json()).then(d => setIssues(d.issues || [])).catch(() => { })
+    fetch(`/api/zj/tasks/${id}/issues`).then(r => r.json()).then(d => { setIssues(d.issues || []); setFindings(d.findings || []) }).catch(() => { })
     const timer = setInterval(load, 2500)
     return () => clearInterval(timer)
   }, [id])
@@ -116,7 +117,7 @@ export function ZjTaskDetail() {
         <div className="flex items-center gap-3">
           <button onClick={() => history.back()} className="rounded-lg border border-border p-2 hover:bg-secondary"><ArrowLeft size={16} /></button>
           <div className="page-header">
-            <h1>{t.bot_name || `bot ${t.bot_id}`} 质检详情</h1>
+            <h1>{t.name || t.bot_name || `bot ${t.bot_id}`}质检问题</h1>
             <p className="sub mono">{t.id}{t.tenant_name ? ` · ${t.tenant_name}` : ''}{t.call_count ? ` · ${t.call_count.toLocaleString()} 通` : ''}</p>
           </div>
         </div>
@@ -182,48 +183,41 @@ export function ZjTaskDetail() {
       )}
 
       {/* 问题证据（逐通话「是否回归测试」→ 进入大模型优化测试 case 集） */}
-      {issues.length > 0 && (
+      {/* 质检问题：全部问题平铺（逐通话逐轮），每条可发起回归测试 */}
+      {findings.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-3.5 border-b border-border text-sm font-semibold flex items-center justify-between">
-            <span>质检问题（{issues.length} 类）</span>
-            {t.status === 'done' && <span className="text-xs text-muted-foreground font-normal">勾选通话 → 发起回归测试（voiceagent-evidence-driven-optimizer 真实跑测）</span>}
+            <span>全部问题（{findings.length} 条）</span>
+            {t.status === 'done' && <span className="text-xs text-muted-foreground font-normal">勾选问题 → 发起回归测试（voiceagent-evidence-driven-optimizer 真实跑测）</span>}
           </div>
-          <div className="divide-y divide-border">
-            {issues.map(g => (
-              <details key={g.rule_id} className="group">
-                <summary className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-secondary/40">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${g.level === '红线' ? 'bg-destructive-weak text-destructive-strong' : 'bg-warning-weak text-warning-strong'}`}>
-                      {g.rule_id} {g.rule_name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{g.calls} 通命中</span>
+          <div className="divide-y divide-border max-h-[560px] overflow-auto">
+            {findings.map((f, i) => {
+              const key = `${f.rule_id}|${f.call_id}|${f.turn || 0}`
+              const picked = !!regSel[key]
+              return (
+                <div key={i} className={`px-5 py-3 ${picked ? 'bg-amber-50/60' : ''}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="mono text-xs text-muted-foreground">{f.call_id}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${f.level === '红线' ? 'bg-destructive-weak text-destructive-strong' : 'bg-warning-weak text-warning-strong'}`}>
+                        {f.rule_id} {f.rule_name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">轮次 {f.turn}</span>
+                    </div>
+                    {t.status === 'done' && (
+                      <button
+                        onClick={() => setRegSel(v => ({ ...v, [key]: !v[key] }))}
+                        className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition shrink-0 ${picked ? 'bg-amber-500 text-white font-medium' : 'border border-border text-muted-foreground hover:border-amber-400 hover:text-amber-600'}`}>
+                        <FlaskConical size={12} /> {picked ? '已选入' : '是否回归测试'}
+                      </button>
+                    )}
                   </div>
-                  <ChevronRight size={14} className="text-muted-foreground transition-transform group-open:rotate-90" />
-                </summary>
-                <div className="px-5 pb-4 space-y-2.5">
-                  {g.samples.map((s, i) => {
-                    const key = `${g.rule_id}|${s.call_id}|${s.turn || 0}`
-                    const picked = !!regSel[key]
-                    return (
-                      <div key={i} className={`rounded-lg p-3 ${picked ? 'bg-amber-50/70 ring-1 ring-amber-300' : 'bg-secondary/30'}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs text-muted-foreground mono">{s.call_id} · 轮次 {s.turn}</div>
-                          {t.status === 'done' && (
-                            <button
-                              onClick={() => setRegSel(v => ({ ...v, [key]: !v[key] }))}
-                              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition ${picked ? 'bg-amber-500 text-white font-medium' : 'border border-border text-muted-foreground hover:border-amber-400 hover:text-amber-600'}`}>
-                              <FlaskConical size={12} /> {picked ? '已选入' : '是否回归测试'}
-                            </button>
-                          )}
-                        </div>
-                        <div className="text-sm mt-1">「{s.evidence}」</div>
-                        {s.detail && <div className="text-xs text-muted-foreground mt-1">{s.detail}</div>}
-                      </div>
-                    )
-                  })}
+                  <div className="text-sm mt-1.5">「{f.evidence}」</div>
+                  {f.detail && <div className="text-xs text-muted-foreground mt-1">{f.detail}</div>}
+                  {f.suggestion && <div className="text-xs mt-1 text-info-strong">建议：{f.suggestion}</div>}
                 </div>
-              </details>
-            ))}
+              )
+            })}
           </div>
           {t.status === 'done' && Object.values(regSel).some(Boolean) && (
             <div className="px-5 py-3 border-t border-border flex items-center justify-between bg-amber-50/40">
@@ -239,12 +233,11 @@ export function ZjTaskDetail() {
                     if (pd && (pd.type === 'rule' || pd.type === 'deleted')) { setRegMsg('✗ ' + (pd.message || '该 bot 不支持回归测试')); setRegBusy(false); return }
                     const items = Object.keys(regSel).filter(k => regSel[k]).map(k => {
                       const [ruleId, callId, turn] = k.split('|')
-                      const g = issues.find(x => x.rule_id === ruleId)
-                      const smp = g?.samples?.find(s => String(s.call_id) === callId && String(s.turn || 0) === turn)
+                      const f = findings.find(x => x.rule_id === ruleId && String(x.call_id) === callId && String(x.turn || 0) === turn)
                       return {
-                        id: callId, kind: `${ruleId} ${g?.rule_name || ''}`.trim(), node: `轮次${turn}`,
-                        expected: smp?.detail || '按提示词/知识库口径正确答复', actual: smp?.evidence || '',
-                        detail: `${g?.rule_name || ''}：${smp?.detail || smp?.evidence || ''}`.slice(0, 400),
+                        id: callId, kind: `${ruleId} ${f?.rule_name || ''}`.trim(), node: `轮次${turn}`,
+                        expected: f?.detail || f?.suggestion || '按提示词/知识库口径正确答复', actual: f?.evidence || '',
+                        detail: `${f?.rule_name || ''}：${f?.detail || f?.evidence || ''}`.slice(0, 400),
                         case: null,
                       }
                     })

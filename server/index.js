@@ -732,6 +732,7 @@ route('GET', /^\/api\/zj\/tasks\/([\w-]+)\/issues$/, m => {
   const t = getZjTask(m[1]);
   if (!t) return notFound('任务不存在');
   let issues = [];
+  let findings = [];   // 全量问题明细（逐通话逐轮，不聚合不截断）
   try {
     const raw = JSON.parse(fs.readFileSync(path.join(zjTaskDir(m[1]), 'issues.json'), 'utf8'));
     issues = Array.isArray(raw) ? raw : (raw.issues || []);
@@ -741,7 +742,21 @@ route('GET', /^\/api\/zj\/tasks\/([\w-]+)\/issues$/, m => {
       issues = collectZjIssuesFallback(insp.reports);
     } catch { }
   }
-  return ok({ taskId: m[1], botId: t.bot_id, botName: t.bot_name, issues });
+  try {
+    const insp = JSON.parse(fs.readFileSync(path.join(zjTaskDir(m[1]), 'inspect.json'), 'utf8'));
+    for (const r of (insp.reports || [])) {
+      for (const f of [...(r.redline_hits || []), ...(r.deductions || [])]) {
+        findings.push({
+          call_id: r.call_id, verdict: r.verdict, score: r.score,
+          rule_id: f.rule_id, rule_name: f.rule_name, level: f.level, severity: f.severity,
+          turn: f.turn_idx, evidence: (f.evidence || '').slice(0, 300), detail: (f.detail || '').slice(0, 300),
+          suggestion: (f.suggestion || '').slice(0, 200),
+        });
+      }
+    }
+  } catch { }
+  findings.sort((a, b) => (a.level === '红线' ? 0 : 1) - (b.level === '红线' ? 0 : 1) || String(a.call_id).localeCompare(String(b.call_id)) || (a.turn || 0) - (b.turn || 0));
+  return ok({ taskId: m[1], botId: t.bot_id, botName: t.bot_name, issues, findings, total: findings.length });
 });
 
 // 按天报告下载
